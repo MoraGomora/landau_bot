@@ -1,6 +1,5 @@
 import asyncio
 import signal
-from typing import Optional
 
 import structlog
 from aiogram import Bot, Dispatcher
