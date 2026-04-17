@@ -4,12 +4,8 @@ from aiogram.filters import Command, CommandStart
 from aiogram.types import Message
 from fluent.runtime import FluentLocalization
 
-from filters import IsOwnerFilter
 
-
-router = Router(name="personal")
-router.message.filter(F.chat.type == "private", IsOwnerFilter(is_owner=False))
-
+router = Router(name="start")
 logger = structlog.get_logger()
 
 
