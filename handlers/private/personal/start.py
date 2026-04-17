@@ -1,6 +1,6 @@
 import structlog
 from aiogram import Router, F
-from aiogram.filters import Command
+from aiogram.filters import Command, CommandStart
 from aiogram.types import Message
 from fluent.runtime import FluentLocalization
 
@@ -13,7 +13,7 @@ router.message.filter(F.chat.type == "private", IsOwnerFilter(is_owner=False))
 logger = structlog.get_logger()
 
 
-@router.message(Command("start"))
+@router.message(CommandStart())
 async def cmd_start(message: Message, l10n: FluentLocalization) -> None:
     """Handle /start command for regular users."""
     await logger.ainfo(

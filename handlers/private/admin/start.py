@@ -1,19 +1,15 @@
 import structlog
-from aiogram import Router, F
-from aiogram.filters import Command
+from aiogram import Router
+from aiogram.filters import Command, CommandStart
 from aiogram.types import Message
 from fluent.runtime import FluentLocalization
 
-from filters import IsOwnerFilter
-
 
 router = Router(name="admin")
-router.message.filter(F.chat.type == "private", IsOwnerFilter())
-
 logger = structlog.get_logger()
 
 
-@router.message(Command("start"))
+@router.message(CommandStart())
 async def cmd_owner_hello(message: Message, l10n: FluentLocalization) -> None:
     """Handle /start command for bot owners."""
     await logger.ainfo(
