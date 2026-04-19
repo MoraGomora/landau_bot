@@ -10,8 +10,9 @@ from structlog.typing import FilteringBoundLogger
 from config_reader import get_config, BotConfig, LogConfig, L10nConfig, ThrottlingConfig
 from logs import get_structlog_config
 from fluent_loader import get_fluent_localization
-from middlewares import L10nMiddleware, ThrottlingMiddleware
+from middlewares import L10nMiddleware, ThrottlingMiddleware, ContainerMiddleware
 from handlers import register_all_handlers
+from core.container import AppContainer
 
 
 async def on_startup(bot: Bot, logger: FilteringBoundLogger) -> None:
@@ -29,7 +30,7 @@ async def on_shutdown(bot: Bot, logger: FilteringBoundLogger) -> None:
     await logger.ainfo("Bot stopped")
 
 
-def setup_middlewares(dp: Dispatcher, l10n_config: L10nConfig, throttling_config: ThrottlingConfig) -> None:
+def setup_middlewares(dp: Dispatcher, logger: FilteringBoundLogger, l10n_config: L10nConfig, throttling_config: ThrottlingConfig) -> None:
     """Register all middlewares."""
     locale = get_fluent_localization(
         locale=l10n_config.default_locale,
@@ -45,6 +46,8 @@ def setup_middlewares(dp: Dispatcher, l10n_config: L10nConfig, throttling_config
     dp.message.outer_middleware(L10nMiddleware(locale))
     dp.callback_query.outer_middleware(L10nMiddleware(locale))
     dp.pre_checkout_query.outer_middleware(L10nMiddleware(locale))
+
+    dp.update.middleware(ContainerMiddleware(AppContainer(locale, logger)))
 
 
 async def main() -> None:
@@ -69,7 +72,7 @@ async def main() -> None:
 
     dp = Dispatcher()
 
-    setup_middlewares(dp, l10n_config, throttling_config)
+    setup_middlewares(dp, logger, l10n_config, throttling_config)
     register_all_handlers(dp)
 
     stop_event = asyncio.Event()
