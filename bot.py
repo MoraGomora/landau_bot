@@ -7,7 +7,9 @@ from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
 from structlog.typing import FilteringBoundLogger
 
-from config_reader import get_config, BotConfig, LogConfig, L10nConfig, ThrottlingConfig
+from fluent.runtime import FluentLocalization
+
+from config_reader import get_config, BotConfig, LogConfig, L10nConfig, ThrottlingConfig, MongoConfig
 from logs import get_structlog_config
 from fluent_loader import get_fluent_localization
 from middlewares import L10nMiddleware, ThrottlingMiddleware, ContainerMiddleware
@@ -15,8 +17,23 @@ from handlers import register_all_handlers
 from core.container import AppContainer
 
 
-async def on_startup(bot: Bot, logger: FilteringBoundLogger) -> None:
+async def on_startup(owners: list, bot: Bot, container: AppContainer, logger: FilteringBoundLogger) -> None:
     """Actions to perform on bot startup."""
+    is_connected = await container.repositories.ping()
+    if not is_connected:
+        await logger.aerror(
+            "Failed to connect to MongoDB",
+            status=is_connected
+        )
+
+        for owner in owners:
+            await bot.send_message(
+                owner,
+                "Failed to connect to MongoDB. Check internet connection or add new IP address in MongoDB -> Network config"
+            )
+
+        return
+    
     bot_info = await bot.get_me()
     await logger.ainfo(
         "Bot started",
@@ -30,12 +47,8 @@ async def on_shutdown(bot: Bot, logger: FilteringBoundLogger) -> None:
     await logger.ainfo("Bot stopped")
 
 
-def setup_middlewares(dp: Dispatcher, logger: FilteringBoundLogger, l10n_config: L10nConfig, throttling_config: ThrottlingConfig) -> None:
+def setup_middlewares(dp: Dispatcher, container: AppContainer, locale: FluentLocalization, throttling_config: ThrottlingConfig) -> None:
     """Register all middlewares."""
-    locale = get_fluent_localization(
-        locale=l10n_config.default_locale,
-        locales_dir=l10n_config.locales_path,
-    )
 
     if throttling_config.enabled:
         dp.message.outer_middleware(ThrottlingMiddleware(
@@ -47,7 +60,7 @@ def setup_middlewares(dp: Dispatcher, logger: FilteringBoundLogger, l10n_config:
     dp.callback_query.outer_middleware(L10nMiddleware(locale))
     dp.pre_checkout_query.outer_middleware(L10nMiddleware(locale))
 
-    dp.update.middleware(ContainerMiddleware(AppContainer(locale, logger)))
+    dp.update.middleware(ContainerMiddleware(container))
 
 
 async def main() -> None:
@@ -59,11 +72,12 @@ async def main() -> None:
 
     bot_config = get_config(model=BotConfig, root_key="bot")
     l10n_config = get_config(model=L10nConfig, root_key="localization")
+    mongo_config = get_config(MongoConfig, root_key="mongodb")
 
     try:
         throttling_config = get_config(model=ThrottlingConfig, root_key="throttling")
     except KeyError:
-        throttling_config = ThrottlingConfig()  # Use defaults
+        throttling_config = ThrottlingConfig()
 
     bot = Bot(
         token=bot_config.token.get_secret_value(),
@@ -72,7 +86,18 @@ async def main() -> None:
 
     dp = Dispatcher()
 
-    setup_middlewares(dp, logger, l10n_config, throttling_config)
+    locale = get_fluent_localization(
+        locale=l10n_config.default_locale,
+        locales_dir=l10n_config.locales_path,
+    )
+
+    container = AppContainer(
+        mongo_config,
+        locale,
+        logger
+    )
+
+    setup_middlewares(dp, container, locale, throttling_config)
     register_all_handlers(dp)
 
     stop_event = asyncio.Event()
@@ -87,7 +112,7 @@ async def main() -> None:
         except NotImplementedError:
             pass
 
-    await on_startup(bot, logger)
+    await on_startup(bot_config.owners, bot, container, logger)
 
     try:
         polling_task = asyncio.create_task(

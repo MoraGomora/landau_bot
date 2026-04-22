@@ -67,6 +67,13 @@ class Config(BaseModel):
     localization: L10nConfig = L10nConfig()
 
 
+class MongoConfig(BaseModel):
+    username: str
+    password: str
+    cluster_url: str
+    app_name: str
+
+
 class URL(BaseModel):
     url: str
 

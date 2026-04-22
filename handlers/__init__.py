@@ -11,9 +11,6 @@ def register_all_handlers(dp: Dispatcher) -> None:
     Args:
         dp: Aiogram Dispatcher instance
     """
-    # dp.include_router(admin_actions.router)
-    # dp.include_router(group_events.router)
-    # dp.include_router(personal_actions.router)
 
     dp.include_routers(
         private.router,
@@ -22,10 +19,7 @@ def register_all_handlers(dp: Dispatcher) -> None:
 
 
 __all__ = [
-    "register_all_handlers",
-    # "admin_actions",
-    # "group_events",
-    # "personal_actions",
+    "register_all_handlers"
     "private",
     "group"
 ]

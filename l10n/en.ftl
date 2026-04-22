@@ -64,3 +64,18 @@ violation-msg =
     Hello, { $user }. You have been removed from the group because this chat is used only for comments.
     Please do not join this chat or add anyone else. Please only comment on posts. Otherwise, the time limit will increase with each attempt to enter.
     The limit will be lifted in { $duration_msg }
+
+failed-to-ban =
+    Failed to ban user. Reason (from Telegram): { e }
+
+cannot-get-owner =
+    Failed to get group owner
+
+data-not-saved =
+    Failed to save/create chat settings
+
+cannot-count-join-attempt =
+    Failed to count attempt to join group
+
+status-was-not-updated =
+    Failed to update status

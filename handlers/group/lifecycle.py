@@ -4,8 +4,6 @@ from aiogram import Router, F
 from aiogram.types import Message, ContentType
 from aiogram.exceptions import TelegramBadRequest
 
-from fluent.runtime import FluentLocalization
-
 from core.container import AppContainer
 
 from . import utils
@@ -15,10 +13,7 @@ router = Router(name="lifecycle")
 
 
 @router.message(F.content_type == ContentType.NEW_CHAT_MEMBERS)
-async def new_members(
-    msg: Message, container: AppContainer,
-    l10n: FluentLocalization
-):
+async def new_members(msg: Message, container: AppContainer) -> None:
     try:
         deleted = await msg.delete()
         if deleted:
@@ -35,6 +30,8 @@ async def new_members(
             error=str(e)
         )
         return
+    
+    me = await msg.bot.get_me()
 
     if msg.new_chat_members:
         await container.logger.ainfo(
@@ -45,6 +42,14 @@ async def new_members(
         )
 
         for member in msg.new_chat_members:
+            if member.id == me.id:
+                await container.logger.ainfo(
+                    "User add me to the chat. I can't restrict myself",
+                    chat_id=msg.chat.id,
+                    user_id=msg.from_user.id
+                )
+                continue
+            
             await utils.ban_member(
                 msg, container,
                 msg.chat.id, member.id,
@@ -69,7 +74,11 @@ async def new_members(
     
 
 @router.message(F.content_type == ContentType.LEFT_CHAT_MEMBER)
-async def new_members(msg: Message, container: AppContainer):
+async def new_members(msg: Message, container: AppContainer) -> None:
+    me = await msg.bot.get_me()
+    if msg.left_chat_member.id == me.id:
+        return
+    
     try:
         deleted = await msg.delete()
         if deleted:
