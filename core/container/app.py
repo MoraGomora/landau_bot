@@ -39,15 +39,32 @@ class AppContainer:
 
     @property
     def translator(self) -> Translator:
-        return self.get("translator", lambda: Translator(self.l10n))
+        return self.get(
+            "translator",
+            lambda: Translator(self.l10n)
+        )
 
     @property
     def repositories(self) -> Repositories:
-        return self.get("repositories", lambda: Repositories(self.client, "test", self.logger))
+        return self.get(
+            "repositories",
+            lambda: Repositories(
+                self.client,
+                "test",
+                self.logger
+            )
+        )
 
     @property
     def services(self) -> Services:
-        return self.get("services", lambda: Services(self.repositories, self._storage, self.logger))
+        return self.get(
+            "services",
+            lambda: Services(
+                self.repositories,
+                self._storage,
+                self.logger
+            )
+        )
 
     def get(self, name: str, factory):
         if name not in self._cache:
