@@ -6,6 +6,8 @@ pydantic-settings
 fluent.runtime
 fluent.syntax
 cachetools
+redis
+motor
 
 # Optional: Database support
 # aiosqlite>=0.19.0

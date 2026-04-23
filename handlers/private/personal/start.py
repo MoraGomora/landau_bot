@@ -1,27 +1,36 @@
-import structlog
 from aiogram import Router, F
 from aiogram.filters import Command, CommandStart
 from aiogram.types import Message
 from fluent.runtime import FluentLocalization
 
-from filters import IsOwnerFilter
+from core.container import AppContainer
 
 
-router = Router(name="personal")
-router.message.filter(F.chat.type == "private", IsOwnerFilter(is_owner=False))
-
-logger = structlog.get_logger()
+router = Router(name="start")
 
 
 @router.message(CommandStart())
-async def cmd_start(message: Message, l10n: FluentLocalization) -> None:
+async def cmd_start(message: Message, container: AppContainer) -> None:
     """Handle /start command for regular users."""
-    await logger.ainfo(
+    print("jkfhkjdshfkjsdhfkjsdhhk")
+    if not await container.services.user.is_available(message.from_user.id):
+        result = await container.services.user.create(
+            message.from_user.id,
+            True
+        )
+        if not result:
+            return
+        
+    await container.logger.ainfo(
         "User started bot",
         user_id=message.from_user.id if message.from_user else None,
         username=message.from_user.username if message.from_user else None,
     )
-    await message.answer(l10n.format_value("hello-msg"))
+    await message.answer(
+        container.translator.call(
+            "hello-msg"
+        )
+    )
 
 
 @router.message(Command("help"))

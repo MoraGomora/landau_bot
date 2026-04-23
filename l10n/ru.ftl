@@ -41,3 +41,44 @@ error-permission =
 confirm-yes = ✅ Подтвердить
 confirm-no = ❌ Отмена
 confirm-prompt = Вы уверены, что хотите продолжить?
+
+duration-hours =
+    { $hours ->
+        [one] { $hours } час
+        [few] { $hours } часа
+       *[other] { $hours } часов
+    }
+
+duration-minutes =
+    { $minutes ->
+        [one] { $minutes } минута
+        [few] { $minutes } минуты
+       *[other] { $minutes } минут
+    }
+
+duration-seconds =
+    { $seconds ->
+        [one] { $seconds } секунда
+        [few] { $seconds } секунды
+       *[other] { $seconds } секунд
+    }
+
+violation-msg =
+    Привет, { $user }. Ты был удалён(-ена) из группы, потому-что этот чат используется только для комментариев.
+    Просим в этот чат не входить и никого не добавлять, а писать только комментарии под постами, иначе с каждой попыткой ввойти сюда время ограничения будет увеличиваться
+    Ограничения снимутся через { $duration_msg }
+
+failed-to-ban =
+    Не получилось забанить пользователя. Причина (от Телеграма): { e }
+
+cannot-get-owner =
+    Не удалось получить владельца группы
+
+data-not-saved =
+    Не удалось сохранить создать настройки для чата
+
+cannot-count-join-attempt =
+    Не удалось засчитать попытку входа в группу
+
+status-was-not-updated =
+    Не удалось обновить статус

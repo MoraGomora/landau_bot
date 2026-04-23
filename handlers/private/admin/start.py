@@ -5,7 +5,7 @@ from aiogram.types import Message
 from fluent.runtime import FluentLocalization
 
 
-router = Router(name="admin")
+router = Router(name="start")
 logger = structlog.get_logger()
 
 
