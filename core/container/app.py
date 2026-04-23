@@ -4,12 +4,11 @@ from structlog.typing import FilteringBoundLogger
 
 from fluent.runtime import FluentLocalization
 
-from config_reader import URL, get_env_or_config
 from core import Translator
 from repositories import Repositories
 from services import Services
 from config_reader import MongoConfig
-from db import RedisCacheStorage, CacheStorage, utils, create_storage
+from db import RedisCacheStorage, CacheStorage, utils
 
 
 class AppContainer:
