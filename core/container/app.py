@@ -4,25 +4,25 @@ from structlog.typing import FilteringBoundLogger
 
 from fluent.runtime import FluentLocalization
 
-from redis.asyncio import Redis
-
 from config_reader import URL, get_env_or_config
 from core import Translator
 from repositories import Repositories
 from services import Services
 from config_reader import MongoConfig
-from db import utils
+from db import RedisCacheStorage, CacheStorage, utils, create_storage
 
 
 class AppContainer:
 
-    def __init__(self, mongo_config: MongoConfig, l10n: FluentLocalization, logger: FilteringBoundLogger):
+    def __init__(
+        self,
+        storage: RedisCacheStorage | CacheStorage,
+        mongo_config: MongoConfig,
+        l10n: FluentLocalization,
+        logger: FilteringBoundLogger
+    ) -> None:
         self._cache = {}
 
-        self._redis_url = get_env_or_config(
-            "REDIS_URL", URL,
-            "redis", "url"
-        )
         self.client = AsyncIOMotorClient(
             utils.build_mongodb_url(mongo_config),
             maxPoolSize=50,
@@ -32,10 +32,7 @@ class AppContainer:
         self.logger: FilteringBoundLogger = logger
         self.l10n = l10n
 
-        if self._redis_url:
-            self._redis = Redis.from_url(self._redis_url)
-        else:
-            self._redis = None
+        self._storage = storage
 
         self._translator = None
         self._repos = None
@@ -51,7 +48,7 @@ class AppContainer:
 
     @property
     def services(self) -> Services:
-        return self.get("services", lambda: Services(self.repositories, self._redis, self.logger))
+        return self.get("services", lambda: Services(self.repositories, self._storage, self.logger))
 
     def get(self, name: str, factory):
         if name not in self._cache:

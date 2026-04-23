@@ -1,9 +1,8 @@
 from structlog.typing import FilteringBoundLogger
 
-from redis.asyncio import Redis
-
 from repositories import Repositories, ChatUserRepository
 from models import ChatUser, CreateChatUser, Violation
+from db import RedisCacheStorage, CacheStorage
 from enums import Status
 
 
@@ -12,14 +11,14 @@ class ChatUserService:
     def __init__(
             self,
             repository: Repositories,
-            redis: Redis,
+            storage: RedisCacheStorage | CacheStorage,
             logger: FilteringBoundLogger
     ) -> None:
         if not isinstance(repository, ChatUserRepository):
             raise ValueError("\"repository\" should be a ChatUserRepository object")
         
         self.repo = repository
-        self.redis = redis
+        self.storage = storage
         self.logger = logger
 
     async def create(
@@ -133,26 +132,16 @@ class ChatUserService:
         return result
     
     async def set_violation_data(self, user_id: int, chat_id: int, time: str, data: Violation) -> bool:
-        if not self.redis:
-            return False
-        
         key = f"key:{chat_id}:{user_id}:{time}"
         
-        return await self.redis.set(key, data.model_dump_json(), ex=86400)
+        return await self.storage.set(key, data.model_dump())
     
     async def get_violation_data(self, user_id: int, chat_id: int, time: str) -> Violation | None:
-        if not self.redis:
-            return
-        
-        key = f"key:{chat_id}:{user_id}:{time}"
-        raw = await self.redis.get(key)
+        raw = await self.storage.get(f"key:{chat_id}:{user_id}:{time}")
 
-        return Violation.model_validate_json(raw) if raw else None
+        return Violation.model_validate(raw) if raw else None
     
     async def has_violation(self, user_id: int, chat_id: int, time: str) -> bool:
-        if not self.redis:
-            return False
-        
         key = f"key:{chat_id}:{user_id}:{time}"
 
-        return await self.redis.exists(key)
+        return await self.storage.exists(key)

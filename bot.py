@@ -9,12 +9,13 @@ from structlog.typing import FilteringBoundLogger
 
 from fluent.runtime import FluentLocalization
 
-from config_reader import get_config, BotConfig, LogConfig, L10nConfig, ThrottlingConfig, MongoConfig
+from config_reader import get_config, get_env_or_config, URL, BotConfig, LogConfig, L10nConfig, ThrottlingConfig, MongoConfig
 from logs import get_structlog_config
 from fluent_loader import get_fluent_localization
 from middlewares import L10nMiddleware, ThrottlingMiddleware, ContainerMiddleware
 from handlers import register_all_handlers
 from core.container import AppContainer
+from db import create_storage
 
 
 async def on_startup(owners: list, bot: Bot, container: AppContainer, logger: FilteringBoundLogger) -> None:
@@ -74,6 +75,11 @@ async def main() -> None:
     l10n_config = get_config(model=L10nConfig, root_key="localization")
     mongo_config = get_config(MongoConfig, root_key="mongodb")
 
+    redis_url = get_env_or_config(
+        "REDIS_URL", URL,
+        "redis", "url"
+    )
+
     try:
         throttling_config = get_config(model=ThrottlingConfig, root_key="throttling")
     except KeyError:
@@ -91,7 +97,10 @@ async def main() -> None:
         locales_dir=l10n_config.locales_path,
     )
 
+    storage = await create_storage(logger, redis_url)
+
     container = AppContainer(
+        storage,
         mongo_config,
         locale,
         logger
