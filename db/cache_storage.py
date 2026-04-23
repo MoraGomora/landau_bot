@@ -1,3 +1,4 @@
+import json
 from datetime import datetime, timedelta
 
 from typing import Any, Dict, Optional
@@ -25,16 +26,18 @@ class CacheStorage:
         
         return value
     
-    async def set(self, key: str, value: Any, ex: int = 86400):
+    async def set(self, key: str, value: Any, ex: int = 86400) -> bool:
         expires_at = datetime.now() + timedelta(seconds=ex) if ex else None
 
         self._memory[key] = (value, expires_at)
+
+        return bool(value)
 
     async def delete(self, key: str) -> bool:
         return bool(self._memory.pop(key, None))
     
     async def exists(self, key: str) -> bool:
-        return bool(self._memory.get(key))
+        return bool(self._memory.get(key, None))
     
 
 class RedisCacheStorage(CacheStorage):
@@ -51,21 +54,26 @@ class RedisCacheStorage(CacheStorage):
 
                 return raw
         except Exception:
-            await self._memory.get(key)
+            value, _ = self._memory.get(key)
+            return value
 
-    async def set(self, key: str, value: Any):
-        self._memory[key] = value
+    async def set(self, key: str, value: Any, ex: int = 86400) -> bool:
+        expires_at = datetime.now() + timedelta(seconds=ex) if ex else None
+        self._memory[key] = (value, expires_at)
+
         try:
-            await self._redis.set(key, value, ex=86400)
+            raw = await self._redis.set(key, value, ex=ex)
+            
+            return raw
         except Exception:
-            pass
+            mem_value, _ = self._memory.get(key)
+            return bool(mem_value)
 
     async def delete(self, key: str) -> bool:
         self._memory.pop(key, None)
-        try:
-            result = await self._redis.delete(key)
 
-            return bool(result)
+        try:
+            return await self._redis.delete(key)
         except Exception:
             pass
 
@@ -73,6 +81,8 @@ class RedisCacheStorage(CacheStorage):
     
     async def exists(self, key: str) -> bool:
         try:
-            return await self._redis.exists(key)
+            result = await self._redis.exists(key)
+
+            return result
         except Exception:
             return bool(self._memory.get(key, None))

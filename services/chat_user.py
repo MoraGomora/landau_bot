@@ -11,7 +11,7 @@ class ChatUserService:
     def __init__(
             self,
             repository: Repositories,
-            storage: RedisCacheStorage | CacheStorage,
+            storage: CacheStorage,
             logger: FilteringBoundLogger
     ) -> None:
         if not isinstance(repository, ChatUserRepository):
@@ -132,16 +132,39 @@ class ChatUserService:
         return result
     
     async def set_violation_data(self, user_id: int, chat_id: int, time: str, data: Violation) -> bool:
-        key = f"key:{chat_id}:{user_id}:{time}"
+        key = f"key:{time}:{chat_id}:{user_id}"
         
-        return await self.storage.set(key, data.model_dump())
+        result = await self.storage.set(key, data.model_dump_json())
+        if result:
+            await self.logger.adebug(
+                "Data with entered key writed successfully",
+                status=result
+            )
+        
+        return result
     
     async def get_violation_data(self, user_id: int, chat_id: int, time: str) -> Violation | None:
-        raw = await self.storage.get(f"key:{chat_id}:{user_id}:{time}")
+        key = f"key:{time}:{chat_id}:{user_id}"
+        raw = await self.storage.get(key)
+        
+        if raw:
+            await self.logger.adebug(
+                "Data with entered key was found successfully",
+                status=bool(raw)
+            )
 
-        return Violation.model_validate(raw) if raw else None
+            return Violation.model_validate_json(raw)
+        
+        return None
     
     async def has_violation(self, user_id: int, chat_id: int, time: str) -> bool:
-        key = f"key:{chat_id}:{user_id}:{time}"
+        key = f"key:{time}:{chat_id}:{user_id}"
+        raw = await self.storage.exists(key)
 
-        return await self.storage.exists(key)
+        if raw:
+            await self.logger.adebug(
+                "Data with entered key is exists",
+                status=raw
+            )
+        
+        return raw

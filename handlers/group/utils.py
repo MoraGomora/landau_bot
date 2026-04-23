@@ -90,24 +90,20 @@ async def ban_member(
     )
     if not result:
         await container.logger.aerror(
-            "Failed to write a new data about user. Skipping this step...",
-            chat_id=chat_id,
-            member_id=member_id,
-            result=result
-        )
-    else:
-        await container.logger.ainfo(
-            "New data about user violation writed or updated successfully",
+            "Failed to write a new data about user",
             chat_id=chat_id,
             member_id=member_id,
             result=result
         )
 
+        return
+    
     await container.logger.ainfo(
-        "Start banning member...",
-        chat_id=msg.chat.id,
+        "New data about user violation writed or updated successfully. Start banning member...",
+        chat_id=chat_id,
+        member_id=member_id,
+        result=result,
         content_type=msg.content_type,
-        member=member_id
     )
     
     try:
