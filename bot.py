@@ -28,10 +28,20 @@ async def on_startup(owners: list, bot: Bot, container: AppContainer, logger: Fi
         )
 
         for owner in owners:
-            await bot.send_message(
+            await logger.ainfo(
+                "Informating owner about connection problem...",
+                owner_id=owner
+            )
+
+            result = await bot.send_message(
                 owner,
                 "Failed to connect to MongoDB. Check internet connection or add new IP address in MongoDB -> Network config"
             )
+            if result:
+                await logger.ainfo(
+                    "The message sent to owner successfully",
+                    owner_id=owner
+                )
 
         return
     
