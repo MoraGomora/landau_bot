@@ -43,7 +43,7 @@ class AppContainer:
 
     @property
     def repositories(self) -> Repositories:
-        return self.get("repositories", lambda: Repositories(self.client, "test"))
+        return self.get("repositories", lambda: Repositories(self.client, "test", self.logger))
 
     @property
     def services(self) -> Services:
