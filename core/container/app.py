@@ -4,12 +4,11 @@ from structlog.typing import FilteringBoundLogger
 
 from fluent.runtime import FluentLocalization
 
-from config_reader import URL, get_env_or_config
 from core import Translator
 from repositories import Repositories
 from services import Services
 from config_reader import MongoConfig
-from db import RedisCacheStorage, CacheStorage, utils, create_storage
+from db import RedisCacheStorage, CacheStorage, utils
 
 
 class AppContainer:
@@ -40,15 +39,32 @@ class AppContainer:
 
     @property
     def translator(self) -> Translator:
-        return self.get("translator", lambda: Translator(self.l10n))
+        return self.get(
+            "translator",
+            lambda: Translator(self.l10n)
+        )
 
     @property
     def repositories(self) -> Repositories:
-        return self.get("repositories", lambda: Repositories(self.client, "test"))
+        return self.get(
+            "repositories",
+            lambda: Repositories(
+                self.client,
+                "test",
+                self.logger
+            )
+        )
 
     @property
     def services(self) -> Services:
-        return self.get("services", lambda: Services(self.repositories, self._storage, self.logger))
+        return self.get(
+            "services",
+            lambda: Services(
+                self.repositories,
+                self._storage,
+                self.logger
+            )
+        )
 
     def get(self, name: str, factory):
         if name not in self._cache:
