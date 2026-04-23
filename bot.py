@@ -33,7 +33,7 @@ async def on_startup(owners: list, bot: Bot, container: AppContainer, logger: Fi
                 "Failed to connect to MongoDB. Check internet connection or add new IP address in MongoDB -> Network config"
             )
 
-        return
+        exit(1)
     
     bot_info = await bot.get_me()
     await logger.ainfo(
