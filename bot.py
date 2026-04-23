@@ -45,7 +45,13 @@ async def on_startup(owners: list, bot: Bot, container: AppContainer, logger: Fi
 
 async def on_shutdown(bot: Bot, logger: FilteringBoundLogger) -> None:
     """Actions to perform on bot shutdown."""
-    await logger.ainfo("Bot stopped")
+    me = await bot.get_me()
+
+    await logger.ainfo(
+        "Bot stopped",
+        username=me.username,
+        bot_id=me.id
+    )
 
 
 def setup_middlewares(dp: Dispatcher, container: AppContainer, locale: FluentLocalization, throttling_config: ThrottlingConfig) -> None:
