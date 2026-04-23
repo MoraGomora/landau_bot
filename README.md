@@ -595,7 +595,8 @@ MIT License - см. [LICENSE](LICENSE) файл для деталей
 
 ## 👥 Авторство
 
-Разработано: MoraGomora
+Разработано: MoraGomora (Modaxon)
+
 За основу был взят [вот этот шаблон](https://github.com/Priler/tgbotbase3)
 
 Этот README был создан с помощью Copilot
