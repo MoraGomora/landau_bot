@@ -3,7 +3,7 @@ from structlog.typing import FilteringBoundLogger
 from motor.motor_asyncio import AsyncIOMotorClient
 from pymongo.errors import OperationFailure, PyMongoError
 
-from .repos import SettingsRepository, UserRepository, ChatUserRepository, ChatOwnerRepository
+from .repos import SettingsRepository, UserRepository, ChatUserRepository
 
 
 class Repositories:
@@ -19,7 +19,6 @@ class Repositories:
         self.settings = SettingsRepository(collection.settings)
         self.user = UserRepository(collection.users)
         self.chat_user = ChatUserRepository(collection.chat_users)
-        self.chat_owner = ChatOwnerRepository(collection.chat_owners)
 
         self._client = client
         self._logger = logger
@@ -49,6 +48,5 @@ __all__ = [
     "Repositories",
     "SettingsRepository",
     "UserRepository",
-    "ChatUserRepository",
-    "ChatOwnerRepository"
+    "ChatUserRepository"
 ]

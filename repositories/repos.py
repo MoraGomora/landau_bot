@@ -1,5 +1,5 @@
 from .mongo import BaseRepository
-from models import Settings, User, ChatUser, ChatOwner
+from models import Settings, User, ChatUser
 
 
 class SettingsRepository(BaseRepository[Settings]):
@@ -18,9 +18,3 @@ class ChatUserRepository(BaseRepository[ChatUser]):
     
     def __init__(self, collection) -> None:
         super().__init__(collection, ChatUser)
-
-
-class ChatOwnerRepository(BaseRepository[ChatOwner]):
-    
-    def __init__(self, collection) -> None:
-        super().__init__(collection, ChatOwner)
