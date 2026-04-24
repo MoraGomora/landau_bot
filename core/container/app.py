@@ -1,14 +1,17 @@
+import asyncio
+from typing import Dict, Awaitable, Callable
+
 from motor.motor_asyncio import AsyncIOMotorClient
 
 from structlog.typing import FilteringBoundLogger
 
 from fluent.runtime import FluentLocalization
 
-from core import Translator
+from core import Translator, SimpleWorkerManager
 from repositories import Repositories
 from services import Services
 from config_reader import MongoConfig
-from db import RedisCacheStorage, CacheStorage, utils
+from db import RedisCacheStorage, CacheStorage, SimpleInMemory, utils
 
 
 class AppContainer:
@@ -20,7 +23,8 @@ class AppContainer:
         l10n: FluentLocalization,
         logger: FilteringBoundLogger
     ) -> None:
-        self._cache = {}
+        self._cache: Dict[str, Callable[[], Awaitable[None]]] = {}
+        self.memory = SimpleInMemory()
 
         self.client = AsyncIOMotorClient(
             utils.build_mongodb_url(mongo_config),
@@ -33,9 +37,13 @@ class AppContainer:
 
         self._storage = storage
 
+        # LOCKS
+        self.ban_member_lock = asyncio.Lock()
+
         self._translator = None
         self._repos = None
         self._services = None
+        self._worker_manager = None
 
     @property
     def translator(self) -> Translator:
@@ -62,6 +70,15 @@ class AppContainer:
             lambda: Services(
                 self.repositories,
                 self._storage,
+                self.logger
+            )
+        )
+    
+    @property
+    def worker_manager(self) -> SimpleWorkerManager:
+        return self.get(
+            "worker_manager",
+            lambda: SimpleWorkerManager(
                 self.logger
             )
         )

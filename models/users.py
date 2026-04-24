@@ -19,6 +19,7 @@ class User(BaseMongoModel):
 class ChatUser(BaseMongoModel):
     id: PyObjectId = Field(..., alias="_id")
     user_id: int
+    full_name: str
     chat_id: int
     join_attempts: int
     status: Status
@@ -36,6 +37,7 @@ class CreateUser(BaseModel):
 
 class CreateChatUser(BaseModel):
     user_id: int
+    full_name: str
     chat_id: int
     join_attempts: int = 0
     status: Status = Status.NONE

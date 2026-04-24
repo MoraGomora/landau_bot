@@ -15,35 +15,50 @@ from fluent_loader import get_fluent_localization
 from middlewares import L10nMiddleware, ThrottlingMiddleware, ContainerMiddleware
 from handlers import register_all_handlers
 from core.container import AppContainer
-from db import create_storage
+from core import SimpleWorker
+import db
+import tasks
+
+
+def register_tasks(owners: list, bot: Bot, container: AppContainer):
+    container.worker_manager.register(
+        SimpleWorker(
+            "check-users-status",
+            lambda: tasks.check_users_status(
+                bot,
+                container
+            ),
+            60,
+            container.ban_member_lock
+        )
+    )
+    container.worker_manager.register(
+        SimpleWorker(
+            "delete-messages",
+            lambda: tasks.delete_message(
+                bot,
+                container
+            ),
+            45
+        )
+    )
+    container.worker_manager.register(
+        SimpleWorker(
+            "test-db-connection",
+            lambda: tasks.test_db(
+                owners,
+                bot,
+                container
+            ),
+            30
+        )
+    )
 
 
 async def on_startup(owners: list, bot: Bot, container: AppContainer, logger: FilteringBoundLogger) -> None:
     """Actions to perform on bot startup."""
-    is_connected = await container.repositories.ping()
-    if not is_connected:
-        await logger.aerror(
-            "Failed to connect to MongoDB",
-            status=is_connected
-        )
-
-        for owner in owners:
-            await logger.ainfo(
-                "Informating owner about connection problem...",
-                owner_id=owner
-            )
-
-            result = await bot.send_message(
-                owner,
-                "Failed to connect to MongoDB. Check internet connection or add new IP address in MongoDB -> Network config"
-            )
-            if result:
-                await logger.ainfo(
-                    "The message sent to owner successfully",
-                    owner_id=owner
-                )
-
-        return
+    register_tasks(owners, bot, container)
+    container.worker_manager.start_all()
     
     bot_info = await bot.get_me()
     await logger.ainfo(
@@ -53,10 +68,11 @@ async def on_startup(owners: list, bot: Bot, container: AppContainer, logger: Fi
     )
 
 
-async def on_shutdown(bot: Bot, logger: FilteringBoundLogger) -> None:
+async def on_shutdown(bot: Bot, container: AppContainer, logger: FilteringBoundLogger) -> None:
     """Actions to perform on bot shutdown."""
-    me = await bot.get_me()
+    container.worker_manager.stop_all()
 
+    me = await bot.get_me()
     await logger.ainfo(
         "Bot stopped",
         username=me.username,
@@ -113,7 +129,7 @@ async def main() -> None:
         locales_dir=l10n_config.locales_path,
     )
 
-    storage = await create_storage(logger, redis_url)
+    storage = await db.create_storage(logger, redis_url)
 
     container = AppContainer(
         storage,
@@ -154,7 +170,7 @@ async def main() -> None:
             pass
 
     finally:
-        await on_shutdown(bot, logger)
+        await on_shutdown(bot, container, logger)
         await bot.session.close()
 
 
