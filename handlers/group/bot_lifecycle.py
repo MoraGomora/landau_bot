@@ -63,6 +63,21 @@ async def bot_join(
                 )
             )
             return
+        
+        # created = await container.services.chat_owner.create_or_update(
+        #     owner.user.id,
+        #     update.chat.id,
+        #     update.chat.id
+        # )
+        # if not created:
+        #     return
+        
+        # await container.logger.ainfo(
+        #     "Chat owner record created successfully",
+        #     chat_id=update.chat.id,
+        #     owner_id=owner.user.id,
+        #     owner_full_name=owner.user.full_name
+        # )
 
         result = await container.services.settings.create(
             chat_id=update.chat.id,
@@ -76,9 +91,9 @@ async def bot_join(
                 chat_id=update.chat.id
             )
             return
-
+        
         await container.logger.ainfo(
-            "Settings for this chat created successfully",
+            "Settings for this chat created successfully. Creating chat owner record...",
             chat_id=update.chat.id
         )
     except TelegramBadRequest as e:

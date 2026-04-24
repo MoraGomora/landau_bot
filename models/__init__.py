@@ -3,6 +3,7 @@ from .settings import Settings, CreateSettings
 from .users import User, CreateUser, ChatUser, CreateChatUser
 from .types import PyObjectId
 from .violation import Violation
+from .owner import ChatOwner, CreateChatOwner
 
 
 __all__ = [
@@ -14,5 +15,7 @@ __all__ = [
     "CreateUser",
     "ChatUser",
     "CreateChatUser",
+    "ChatOwner",
+    "CreateChatOwner",
     "Violation"
 ]

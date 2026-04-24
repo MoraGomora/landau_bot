@@ -1,17 +1,34 @@
 ## General messages
 hello-msg =
-    <b>👋 Hello!</b>
-    Welcome to the bot. Use /help to see available commands.
+    <b>👋 Hello! Welcome to the bot.</b>
+    Here you can see your restrictions in chats where the bot is present, as well as configure the bot for your chats.
+    Below, you can select the item you're interested in.
+
+    Select what interests you:
 
 hello-owner =
     <b>👊 Hello, owner!</b>
     You have full access to bot administration.
 
-help-msg =
-    <b>📚 Available commands:</b>
+choose-chat =
+    Select the chat you want to customize:
+
+choose-setting =
+    Select the setting you are interested in:
+
+on = On
+off = Off
+
+send-violation-msg =
+    Sending a ban message: { $violation_status }
     
-    /start - Start the bot
-    /help - Show this message
+turn-dynamic-violation-msg =
+    Dynamic ban time: { $dynamic_violation_status }
+
+current-setting-status =
+    The current status of this setting is: { $status }
+
+    <i>All data is saved automatically</i>
 
 ## Admin messages
 ping-msg =
@@ -37,10 +54,16 @@ error-permission =
     <b>🚫 Access Denied</b>
     You don't have permission to use this command.
 
+chats-not-found =
+    Your chats were not found. Most likely, you did not add the bot to your chat.
+
 ## Confirmation
 confirm-yes = ✅ Confirm
 confirm-no = ❌ Cancel
 confirm-prompt = Are you sure you want to proceed?
+
+settings-btn = Settings
+support-btn = Bot support
 
 duration-hours =
     { $hours ->

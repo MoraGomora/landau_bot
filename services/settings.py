@@ -119,3 +119,13 @@ class SettingsService:
         doc = await self.get(chat_id=chat_id)
 
         return bool(doc)
+    
+    async def get_chats_by_owner_id(self, owner_id: int) -> list[Settings] | None:
+        docs = await self.repo.get_many(
+            {"owner_id": owner_id}
+        )
+
+        if not docs:
+            return
+        
+        return docs
