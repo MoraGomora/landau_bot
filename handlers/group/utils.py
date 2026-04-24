@@ -169,7 +169,7 @@ async def ban_member(
             )
 
             if msg:
-                container.msgs_cache[chat_id] = msg.message_id
+                container.memory.set(chat_id, msg.message_id)
             
     except TelegramBadRequest as e:
         await container.logger.aerror(

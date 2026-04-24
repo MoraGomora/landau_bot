@@ -19,15 +19,12 @@ class SimpleWorker:
 
     async def _run(self) -> NoReturn:
         while True:
-            try:
-                if self._lock.locked():
-                    await asyncio.sleep(self._interval)
-                    continue
+            if self._lock.locked():
+                await asyncio.sleep(self._interval)
+                continue
 
-                async with self._lock:
-                    await self._func()
-            except Exception as e:
-                raise e
+            async with self._lock:
+                await self._func()
             
             await asyncio.sleep(self._interval)
 

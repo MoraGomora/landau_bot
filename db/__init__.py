@@ -6,6 +6,7 @@ except ImportError:
 from structlog.typing import FilteringBoundLogger
 
 from .cache_storage import CacheStorage, RedisCacheStorage
+from .memory import SimpleInMemory
 
 
 async def create_storage(logger: FilteringBoundLogger, redis_url: str | None = None) -> CacheStorage:
@@ -32,5 +33,6 @@ async def create_storage(logger: FilteringBoundLogger, redis_url: str | None = N
 
 __all__ = [
     "CacheStorage",
-    "RedisCacheStorage"
+    "RedisCacheStorage",
+    "SimpleInMemory"
 ]

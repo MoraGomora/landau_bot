@@ -25,25 +25,37 @@ async def check_users_status(bot: Bot, container: AppContainer) -> None:
 
 
 async def delete_message(bot: Bot, container: AppContainer) -> None:
-    if not container.msgs_cache:
+    all_msgs = container.memory.get_all()
+    if not all_msgs:
+        await container.logger.adebug(
+            "Messages not found"
+        )
+
         return
     
-    for chat_id, msg_id in container.msgs_cache.items():
-        result = await bot.delete_message(chat_id, msg_id)
-        if not result:
-            await container.logger.aerror(
-                "Failed to delete a message from chat",
-                message_id=msg_id,
+    for chat_id, msg_id in list(all_msgs.items()):
+        if not isinstance(chat_id, int):
+            continue
+
+        ids = msg_id if isinstance(msg_id, list) else [msg_id]
+
+        for mid in ids:
+            result = await bot.delete_message(chat_id=chat_id, message_id=mid)
+            if not result:
+                await container.logger.aerror(
+                    event="Failed to delete a message from chat",
+                    message_id=mid,
+                    chat_id=chat_id
+                )
+                continue
+
+            await container.logger.ainfo(
+                event="Message deleted successfully from the chat",
+                message_id=mid,
                 chat_id=chat_id
             )
 
-            return
-        
-        await container.logger.ainfo(
-            "Message deleted successfully from the chat",
-            message_id=msg_id,
-            chat_id=chat_id
-        )
+        container.memory.delete(chat_id)
 
 
 async def test_db(owners: list, bot: Bot, container: AppContainer) -> None:

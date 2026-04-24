@@ -28,7 +28,7 @@ def register_tasks(owners: list, bot: Bot, container: AppContainer):
                 bot,
                 container
             ),
-            5,
+            60,
             container.ban_member_lock
         )
     )

@@ -11,7 +11,7 @@ from core import Translator, SimpleWorkerManager
 from repositories import Repositories
 from services import Services
 from config_reader import MongoConfig
-from db import RedisCacheStorage, CacheStorage, utils
+from db import RedisCacheStorage, CacheStorage, SimpleInMemory, utils
 
 
 class AppContainer:
@@ -24,7 +24,7 @@ class AppContainer:
         logger: FilteringBoundLogger
     ) -> None:
         self._cache: Dict[str, Callable[[], Awaitable[None]]] = {}
-        self.msgs_cache: Dict[int, int] = {}
+        self.memory = SimpleInMemory()
 
         self.client = AsyncIOMotorClient(
             utils.build_mongodb_url(mongo_config),

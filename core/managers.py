@@ -1,4 +1,5 @@
-from typing import Dict
+import asyncio
+from typing import Dict, Callable
 
 from structlog.typing import FilteringBoundLogger
 
@@ -32,6 +33,20 @@ class SimpleWorkerManager:
             worker_interval=worker._interval
         )
 
+    def _make_callback(self, name: str) -> Callable[..., None]:
+        def _on_done(task: asyncio.Task) -> None:
+            if task.cancelled():
+                return
+            
+            exc = task.exception()
+            if exc:
+                self._logger.error(
+                    event="Worker crashed",
+                    worker=name,
+                    error=str(exc)
+                )
+        return _on_done
+
     def start_all(self):
         if not self._workers:
             return
@@ -47,6 +62,7 @@ class SimpleWorkerManager:
 
                 return
             
+            worker._task.add_done_callback(self._make_callback(worker._name))
             self._logger.debug(
                 "Task started successfully",
                 task_name=worker._name
