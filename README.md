@@ -23,6 +23,7 @@
 - [🔑 Получение токена бота](#-получение-токена-бота)
 - [📊 Команды бота](#-команды-бота)
 - [🔧 Расширение функционала](#-расширение-функционала)
+- [🔄 Фоновые задачи (Workers)](#-фоновые-задачи-workers)
 - [🧪 Разработка и тестирование](#-разработка-и-тестирование)
 - [📚 Зависимости проекта](#-зависимости-проекта)
 - [🐛 Решение проблем](#-решение-проблем)
@@ -500,6 +501,124 @@ my-message = Мое сообщение на русском
 ```python
 message_text = l10n.format_value("my-message")
 await msg.answer(message_text)
+```
+
+## 🔄 Фоновые задачи (Workers)
+
+**Workers** (воркеры) — это фоновые асинхронные задачи, которые выполняются периодически с заданным интервалом. Они идеально подходят для:
+- Периодических проверок (например, статус пользователей)
+- Отложенных операций (удаление сообщений через определённое время)
+- Мониторинга (проверка подключения к БД)
+- Любых повторяющихся задач
+
+### Как работают воркеры
+
+Каждый воркер (`SimpleWorker`) запускается в отдельной асинхронной задаче (asyncio.Task) и выполняется в цикле:
+
+1. **Инициализация** - воркер создается с функцией для выполнения и интервалом повторения
+2. **Регистрация** - воркер регистрируется в `SimpleWorkerManager`
+3. **Запуск** - все воркеры запускаются одновременно при старте бота
+4. **Цикл выполнения** - воркер выполняет функцию, затем ждёт интервал, затем повторяет
+5. **Обработка ошибок** - менеджер ловит исключения и логирует их
+6. **Остановка** - все воркеры останавливаются при выключении бота
+
+### Атрибуты SimpleWorker
+
+| Атрибут | Тип | Описание |
+|---------|-----|---------|
+| `_name` | `str` | Уникальное имя воркера (используется для идентификации и логирования) |
+| `_func` | `Callable[[], Awaitable[None]]` | Асинхронная функция, которую выполняет воркер |
+| `_interval` | `int` | Интервал повторения в секундах (время ожидания между выполнениями) |
+| `_lock` | `asyncio.Lock` | Блокировка для синхронизации (по умолчанию новая Lock, но можно передать свою для координации между воркерами. Если вы передаёте свой Lock - рекомендуется его создать в `AppContainer`, чтобы один и тот же блокировщик был доступен с любой точки бота) |
+| `_task` | `asyncio.Task \| None` | Текущая задача asyncio (устанавливается при запуске) |
+
+### Как подключать воркеры
+
+##### Вариант 1: Через менеджер (рекомендуется) ✅
+
+```python
+from core import SimpleWorker
+
+def register_tasks(bot: Bot, container: AppContainer):
+    # Создаём и регистрируем воркер через менеджер
+    container.worker_manager.register(
+        SimpleWorker(
+            name="my-task",                    # Уникальное имя
+            func=lambda: my_async_function,    # Функция для выполнения
+            interval=30,                       # Интервал в секундах
+            lock=container.some_lock           # (Опционально) Shared lock
+        )
+    )
+
+async def on_startup(bot: Bot, container: AppContainer):
+    register_tasks(bot, container)
+    container.worker_manager.start_all()    # Запуск всех воркеров
+```
+
+> ⚠️ **ВАЖНО:** Всегда создавайте воркеры через `SimpleWorkerManager`, так как это обеспечивает:
+> - **Обработку ошибок** — менеджер ловит исключения и логирует их
+> - **Координацию** — безопасное управление всеми воркерами
+> - **Логирование** — автоматическое логирование старта, остановки и сбоев
+> - **Синхронизацию** — корректная работа с блокировками
+
+##### Вариант 2: Прямое использование (не рекомендуется) ❌
+
+```python
+# Это не рекомендуется, так как нет обработки ошибок, из-за чего воркер при ошибке просто перестанет работать!
+worker = SimpleWorker("my-task", my_function, 30)
+task = worker.start()  # Без контроля менеджера
+```
+
+### Пример: Создание простого воркера
+
+```python
+# tasks.py или в коде bot.py
+async def check_user_status(bot: Bot, container: AppContainer):
+    """Периодическая проверка статуса пользователей."""
+    try:
+        # Ваша логика проверки
+        users = await container.services.user.get_all_active()
+        
+        for user in users:
+            # Обновление статуса
+            await container.services.user.update_status(user.id, "online")
+        
+        await container.logger.ainfo("User status check completed", count=len(users))
+    except Exception as e:
+        await container.logger.aerror("User status check failed", error=str(e))
+
+def register_tasks(owners: list, bot: Bot, container: AppContainer):
+    # Регистрация воркера через менеджер
+    container.worker_manager.register(
+        SimpleWorker(
+            "check-user-status",
+            lambda: check_user_status(bot, container),
+            interval=60,                    # Проверяем каждые 60 секунд
+            lock=container.ban_member_lock  # Используем существующую блокировку
+        )
+    )
+
+async def on_startup(owners: list, bot: Bot, container: AppContainer, logger: FilteringBoundLogger):
+    register_tasks(owners, bot, container)
+    container.worker_manager.start_all()   # Запуск всех воркеров (по умолчанию уже прописано)
+    # ... остальной код
+```
+
+### Пример: Синхронизация между воркерами
+
+Если нужно, чтобы два воркера не выполнялись одновременно, используйте общую `asyncio.Lock`:
+
+```python
+# В AppContainer создаёте общую блокировку
+shared_lock = asyncio.Lock()
+
+# Регистрируете оба воркера с одной блокировкой
+container.worker_manager.register(
+    SimpleWorker("task-1", task_1_func, 30, lock=shared_lock)
+)
+container.worker_manager.register(
+    SimpleWorker("task-2", task_2_func, 45, lock=shared_lock)
+)
 ```
 
 ## 🧪 Разработка и тестирование
