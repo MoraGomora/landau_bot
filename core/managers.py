@@ -8,11 +8,11 @@ from .worker import SimpleWorker
 
 class SimpleWorkerManager:
 
-    def __init__(self, logger: FilteringBoundLogger):
+    def __init__(self, logger: FilteringBoundLogger) -> None:
         self._workers: Dict[str, SimpleWorker] = {}
         self._logger = logger
 
-    def register(self, worker: SimpleWorker):
+    def register(self, worker: SimpleWorker) -> None:
         if worker._name in self._workers:
             available = self._workers[worker._name]
 
@@ -47,7 +47,7 @@ class SimpleWorkerManager:
                 )
         return _on_done
 
-    def start_all(self):
+    def start_all(self) -> None:
         if not self._workers:
             return
         
@@ -67,8 +67,13 @@ class SimpleWorkerManager:
                 "Task started successfully",
                 task_name=worker._name
             )
+        
+        self._logger.debug(
+            "All workers started",
+            workers_count=len(self._workers)
+        )
 
-    def stop_all(self):
+    def stop_all(self) -> None:
         if not self._workers:
             return
         
@@ -87,3 +92,8 @@ class SimpleWorkerManager:
                 "Task stopped successfully",
                 task_name=worker._name
             )
+        
+        self._logger.debug(
+            "All workers stopped",
+            workers_count=len(self._workers)
+        )
