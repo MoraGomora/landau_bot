@@ -28,7 +28,8 @@ def register_tasks(owners: list, bot: Bot, container: AppContainer):
                 bot,
                 container
             ),
-            60
+            5,
+            container.ban_member_lock
         )
     )
     container.worker_manager.register(

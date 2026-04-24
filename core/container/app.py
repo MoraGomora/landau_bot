@@ -1,3 +1,4 @@
+import asyncio
 from typing import Dict, Awaitable, Callable
 
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -35,6 +36,9 @@ class AppContainer:
         self.l10n = l10n
 
         self._storage = storage
+
+        # LOCKS
+        self.ban_member_lock = asyncio.Lock()
 
         self._translator = None
         self._repos = None

@@ -51,14 +51,15 @@ async def new_members(msg: Message, container: AppContainer) -> None:
                 )
                 continue
             
-            await utils.ban_member(
-                msg.bot,
-                container,
-                msg.chat.id,
-                member.id,
-                member.full_name,
-                msg.content_type
-            )
+            async with container.ban_member_lock:
+                await utils.ban_member(
+                    msg.bot,
+                    container,
+                    msg.chat.id,
+                    member.id,
+                    member.full_name,
+                    msg.content_type
+                )
 
             await asyncio.sleep(0.1)
         return
@@ -70,14 +71,15 @@ async def new_members(msg: Message, container: AppContainer) -> None:
         content_type=msg.content_type
     )
 
-    await utils.ban_member(
-        msg.bot,
-        container,
-        msg.chat.id,
-        msg.from_user.id,
-        member.full_name,
-        msg.content_type
-    )
+    async with container.ban_member_lock:
+        await utils.ban_member(
+            msg.bot,
+            container,
+            msg.chat.id,
+            msg.from_user.id,
+            member.full_name,
+            msg.content_type
+        )
     
 
 @router.message(F.content_type == ContentType.LEFT_CHAT_MEMBER)

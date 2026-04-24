@@ -8,19 +8,27 @@ class SimpleWorker:
             self,
             name: str,
             func: Callable[[], Awaitable[None]],
-            interval: int
+            interval: int,
+            lock: asyncio.Lock | None = None
     ) -> None:
         self._name = name
         self._func = func
         self._interval = interval
         self._task: asyncio.Task | None = None
+        self._lock = lock or asyncio.Lock()
 
     async def _run(self) -> NoReturn:
         while True:
             try:
-                await self._func()
+                if self._lock.locked():
+                    await asyncio.sleep(self._interval)
+                    continue
+
+                async with self._lock:
+                    await self._func()
             except Exception as e:
                 raise e
+            
             await asyncio.sleep(self._interval)
 
     def start(self) -> asyncio.Task:
