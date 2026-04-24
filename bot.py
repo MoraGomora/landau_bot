@@ -38,7 +38,7 @@ def register_tasks(owners: list, bot: Bot, container: AppContainer):
                 bot,
                 container
             ),
-            30
+            45
         )
     )
     container.worker_manager.register(
