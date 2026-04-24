@@ -2,7 +2,7 @@ import time
 
 from datetime import datetime, date
 
-from aiogram.types import Message
+from aiogram import Bot
 from aiogram.exceptions import TelegramBadRequest
 
 from core.container import AppContainer
@@ -42,24 +42,34 @@ def today() -> str:
 
 
 async def ban_member(
-        msg: Message, container: AppContainer,
+        bot: Bot, container: AppContainer,
         chat_id: int, member_id: int,
-        member_name: str
-) -> bool:
+        member_name: str, content_type: str
+) -> None:
     await container.logger.adebug(
         "Getting info about user from Redis",
         chat_id=chat_id,
-        member_id=member_id
+        member_id=member_id,
+        content_type=content_type
     )
 
     if not await container.services.chat_user.is_available(member_id, chat_id):
-        created = await container.services.chat_user.create(member_id, chat_id)
+        created = await container.services.chat_user.create(
+            member_id,
+            member_name,
+            chat_id
+        )
         if not created:
             return
     
-    pending = await container.services.chat_user.set_status(member_id, chat_id, Status.PENDING)
+    pending = await container.services.chat_user.set_status(
+        member_id,
+        chat_id,
+        Status.PENDING
+    )
     if not pending:
-        await msg.answer(
+        await bot.send_message(
+            chat_id,
             container.translator.call(
                 "status-was-not-updated"
             )
@@ -93,7 +103,8 @@ async def ban_member(
             "Failed to write a new data about user",
             chat_id=chat_id,
             member_id=member_id,
-            result=result
+            result=result,
+            content_type=content_type
         )
 
         return
@@ -103,18 +114,19 @@ async def ban_member(
         chat_id=chat_id,
         member_id=member_id,
         result=result,
-        content_type=msg.content_type,
+        content_type=content_type
     )
     
     try:
-        banned = await msg.bot.ban_chat_member(
+        banned = await bot.ban_chat_member(
             chat_id, member_id,
             datetime.fromtimestamp(until)
         )
         if banned:
             done = await container.services.chat_user.set_status(member_id, chat_id, Status.DONE)
             if not done:
-                await msg.answer(
+                msg = await bot.send_message(
+                    chat_id,
                     container.translator.call(
                         "status-was-not-updated"
                     )
@@ -124,7 +136,8 @@ async def ban_member(
             
             attempt = await container.services.chat_user.add_join_attempt(member_id, chat_id)
             if not attempt:
-                await msg.answer(
+                msg = await bot.send_message(
+                    chat_id,
                     container.translator.call(
                         "cannot-count-join-attempt"
                     )
@@ -141,31 +154,36 @@ async def ban_member(
 
             await container.logger.ainfo(
                 "Member banned successfully. Counting \"join_attempts\"...",
-                chat_id=msg.chat.id,
-                content_type=msg.content_type,
-                member=msg.from_user.id
+                chat_id=chat_id,
+                content_type=content_type,
+                member=member_id
             )
             
-            await msg.answer(
+            msg = await bot.send_message(
+                chat_id,
                 container.translator.call(
                     "violation-msg",
                     user=user,
                     duration_msg=duration_msg
                 )
             )
+
+            if msg:
+                container.msgs_cache[chat_id] = msg.message_id
             
     except TelegramBadRequest as e:
         await container.logger.aerror(
             "Failed to ban member",
-            chat_id=msg.chat.id,
-            content_type=msg.content_type,
-            member=msg.from_user.id,
+            chat_id=chat_id,
+            content_type=content_type,
+            member=member_id,
             error=str(e)
         )
 
         failed = await container.services.chat_user.set_status(member_id, chat_id, Status.FAILED)
         if not failed:
-            await msg.answer(
+            await bot.send_message(
+                chat_id,
                 container.translator.call(
                     "status-was-not-updated"
                 )
@@ -173,7 +191,8 @@ async def ban_member(
 
             return
 
-        await msg.answer(
+        await bot.send_message(
+            chat_id,
             container.translator.call(
                 "failed-to-ban",
                 e=str(e)

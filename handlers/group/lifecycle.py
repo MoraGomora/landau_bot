@@ -46,14 +46,18 @@ async def new_members(msg: Message, container: AppContainer) -> None:
                 await container.logger.ainfo(
                     "User add me to the chat. I can't restrict myself",
                     chat_id=msg.chat.id,
-                    user_id=msg.from_user.id
+                    user_id=msg.from_user.id,
+                    content_type=msg.content_type
                 )
                 continue
             
             await utils.ban_member(
-                msg, container,
-                msg.chat.id, member.id,
-                member.full_name
+                msg.bot,
+                container,
+                msg.chat.id,
+                member.id,
+                member.full_name,
+                msg.content_type
             )
 
             await asyncio.sleep(0.1)
@@ -67,9 +71,12 @@ async def new_members(msg: Message, container: AppContainer) -> None:
     )
 
     await utils.ban_member(
-        msg, container,
-        msg.chat.id, msg.from_user.id,
-        msg.from_user.full_name
+        msg.bot,
+        container,
+        msg.chat.id,
+        msg.from_user.id,
+        member.full_name,
+        msg.content_type
     )
     
 

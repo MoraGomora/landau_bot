@@ -1,8 +1,10 @@
+from typing import List
+
 from structlog.typing import FilteringBoundLogger
 
 from repositories import Repositories, ChatUserRepository
 from models import ChatUser, CreateChatUser, Violation
-from db import RedisCacheStorage, CacheStorage
+from db import CacheStorage
 from enums import Status
 
 
@@ -24,12 +26,14 @@ class ChatUserService:
     async def create(
             self,
             user_id: int,
+            full_name: str,
             chat_id: int,
             join_attempts: int = 0,
             status: Status = Status.NONE
     ) -> ChatUser | None:
         data = CreateChatUser(
             user_id=user_id,
+            full_name=full_name,
             chat_id=chat_id,
             join_attempts=join_attempts,
             status=status
@@ -47,6 +51,7 @@ class ChatUserService:
         await self.logger.adebug(
             "Chat user record created successfully",
             user_id=result.user_id,
+            full_name=result.full_name,
             chat_id=result.chat_id,
             join_attempts=result.join_attempts,
             status=result.status
@@ -101,6 +106,16 @@ class ChatUserService:
         doc = await self.get(user_id, chat_id)
 
         return bool(doc)
+    
+    async def get_users_with_uncomplete_status(self) -> List[ChatUser] | None:
+        docs = await self.repo.get_many(
+            {"status": {"$in": [Status.PENDING, Status.FAILED]}}
+        )
+
+        if not docs:
+            return
+        
+        return docs
     
     async def set_status(self, user_id: int, chat_id: int, status: Status) -> ChatUser | None:
         doc = await self.get(user_id, chat_id)
