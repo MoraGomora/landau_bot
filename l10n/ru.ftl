@@ -64,6 +64,7 @@ confirm-prompt = Вы уверены, что хотите продолжить?
 
 settings-btn = Настройки
 support-btn = Поддержка бота
+back-btn = ⬅️ Назад
 
 
 duration-hours =

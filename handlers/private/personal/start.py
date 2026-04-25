@@ -8,6 +8,7 @@ from keyboards.menu import MenuCallback, get_menu_kb
 from keyboards.choose_chat import get_choose_chat_kb
 
 from .state import SettingsStates
+from .navigation import NavigationService, NavigationState
 
 
 router = Router(name="start")
@@ -68,16 +69,27 @@ async def main_settings(
             return
 
         await state.set_state(SettingsStates.CHAT_SETTINGS)
+        
+        # Инициализируем навигацию
+        data = await state.get_data()
+        NavigationService.set_navigation(
+            data,
+            current_state=NavigationState.CHAT_SETTINGS,
+            previous_state=NavigationState.MAIN_MENU
+        )
+        await state.update_data(**data)
+        
         await call.message.answer(
             container.translator.call(
                 "choose-chat"
             ),
             reply_markup=get_choose_chat_kb(
-                chats
+                chats,
+                is_back=True,
+                back_text=container.translator.call("back-btn")
             )
         )
         
         await call.answer()
     elif callback_data.action == "support":
-        # await call.message.delete()
         await call.answer("This function in development")

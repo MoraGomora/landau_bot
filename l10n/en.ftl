@@ -64,6 +64,7 @@ confirm-prompt = Are you sure you want to proceed?
 
 settings-btn = Settings
 support-btn = Bot support
+back-btn = ⬅️ Back
 
 duration-hours =
     { $hours ->
