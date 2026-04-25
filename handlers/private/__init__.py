@@ -10,6 +10,6 @@ router.my_chat_member.filter(F.chat.type == ChatType.PRIVATE)
 
 
 router.include_routers(
-    admin.router,
+    # admin.router,
     personal.router
 )

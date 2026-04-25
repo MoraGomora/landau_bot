@@ -1,22 +1,21 @@
 from aiogram import Bot
 
 from core.container import AppContainer
-from handlers.group.utils import ban_member
+from handlers.common.ban_service import BanService
 
 
 async def check_users_status(bot: Bot, container: AppContainer) -> None:
     users = await container.services.chat_user.get_users_with_uncomplete_status()
     if not users:
-        await container.logger.ainfo(
+        await container.logger.adebug(
             "Users with uncompeted status was not found"
         )
 
         return
     
+    ban_service = BanService(bot, container)
     for user in users:
-        await ban_member(
-            bot,
-            container,
+        await ban_service.ban_member(
             user.chat_id,
             user.user_id,
             user.full_name,
@@ -49,7 +48,7 @@ async def delete_message(bot: Bot, container: AppContainer) -> None:
                 )
                 continue
 
-            await container.logger.ainfo(
+            await container.logger.adebug(
                 event="Message deleted successfully from the chat",
                 message_id=mid,
                 chat_id=chat_id
@@ -77,14 +76,14 @@ async def test_db(owners: list, bot: Bot, container: AppContainer) -> None:
                 "Failed to connect to MongoDB. Check internet connection or add new IP address in MongoDB -> Network config"
             )
             if result:
-                await container.logger.ainfo(
+                await container.logger.adebug(
                     "The message sent to owner successfully",
                     owner_id=owner
                 )
 
         return
     
-    await container.logger.ainfo(
+    await container.logger.adebug(
         "MongoDB is alive",
         status=is_connected
     )

@@ -76,9 +76,9 @@ async def bot_join(
                 chat_id=update.chat.id
             )
             return
-
+        
         await container.logger.ainfo(
-            "Settings for this chat created successfully",
+            "Settings for this chat created successfully. Creating chat owner record...",
             chat_id=update.chat.id
         )
     except TelegramBadRequest as e:

@@ -1,7 +1,7 @@
 from aiogram import Router, F
 from aiogram.enums import ChatType
 
-from . import hello, lifecycle, bot_lifecycle, all_messages
+from . import lifecycle, bot_lifecycle, all_messages
 
 
 router = Router(name="group")
@@ -10,7 +10,6 @@ router.my_chat_member.filter(F.chat.type.in_({ChatType.GROUP, ChatType.SUPERGROU
 
 
 router.include_routers(
-    hello.router,
     lifecycle.router,
     bot_lifecycle.router,
     all_messages.router
