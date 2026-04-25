@@ -70,6 +70,7 @@ async def on_startup(owners: list, bot: Bot, container: AppContainer, logger: Fi
 
 async def on_shutdown(bot: Bot, container: AppContainer, logger: FilteringBoundLogger) -> None:
     """Actions to perform on bot shutdown."""
+    
     container.worker_manager.stop_all()
 
     me = await bot.get_me()

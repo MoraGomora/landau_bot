@@ -113,11 +113,15 @@ class ChatUserService:
         )
 
         if not docs:
-            return
+            await self.logger.aerror(
+                "Users with uncompleted status was not found"
+            )
+            
+            return None
         
         return docs
     
-    async def set_status(self, user_id: int, chat_id: int, status: Status) -> ChatUser | None:
+    async def set_status(self, user_id: int, chat_id: int, status: Status) -> bool:
         doc = await self.get(user_id, chat_id)
 
         if not doc:
@@ -144,7 +148,7 @@ class ChatUserService:
             status=result.status
         )
 
-        return result
+        return bool(result)
     
     async def set_violation_data(self, user_id: int, chat_id: int, time: str, data: Violation) -> bool:
         key = f"key:{time}:{chat_id}:{user_id}"
@@ -174,12 +178,12 @@ class ChatUserService:
     
     async def has_violation(self, user_id: int, chat_id: int, time: str) -> bool:
         key = f"key:{time}:{chat_id}:{user_id}"
-        raw = await self.storage.exists(key)
+        result = await self.storage.exists(key)
 
-        if raw:
+        if result:
             await self.logger.adebug(
                 "Data with entered key is exists",
-                status=raw
+                status=result
             )
         
-        return raw
+        return result

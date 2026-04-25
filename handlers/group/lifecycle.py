@@ -5,8 +5,7 @@ from aiogram.types import Message, ContentType
 from aiogram.exceptions import TelegramBadRequest
 
 from core.container import AppContainer
-
-from . import utils
+from handlers.common.ban_service import BanService
 
 
 router = Router(name="lifecycle")
@@ -52,9 +51,8 @@ async def new_members(msg: Message, container: AppContainer) -> None:
                 continue
             
             async with container.ban_member_lock:
-                await utils.ban_member(
-                    msg.bot,
-                    container,
+                ban_service = BanService(msg.bot, container)
+                await ban_service.ban_member(
                     msg.chat.id,
                     member.id,
                     member.full_name,
@@ -72,9 +70,8 @@ async def new_members(msg: Message, container: AppContainer) -> None:
     )
 
     async with container.ban_member_lock:
-        await utils.ban_member(
-            msg.bot,
-            container,
+        ban_service = BanService(msg.bot, container)
+        await ban_service.ban_member(
             msg.chat.id,
             msg.from_user.id,
             member.full_name,

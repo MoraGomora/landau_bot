@@ -1,7 +1,7 @@
 from aiogram import Bot
 
 from core.container import AppContainer
-from handlers.group.utils import ban_member
+from handlers.common.ban_service import BanService
 
 
 async def check_users_status(bot: Bot, container: AppContainer) -> None:
@@ -13,10 +13,9 @@ async def check_users_status(bot: Bot, container: AppContainer) -> None:
 
         return
     
+    ban_service = BanService(bot, container)
     for user in users:
-        await ban_member(
-            bot,
-            container,
+        await ban_service.ban_member(
             user.chat_id,
             user.user_id,
             user.full_name,
