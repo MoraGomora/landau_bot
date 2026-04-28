@@ -101,3 +101,32 @@ async def new_members(msg: Message, container: AppContainer) -> None:
             error=str(e)
         )
         return
+    
+
+@router.message(F.content_type == ContentType.NEW_CHAT_TITLE)
+async def chat_title_changed(msg: Message, container: AppContainer) -> None:
+    try:
+        deleted = await msg.delete()
+        if deleted:
+            await container.logger.ainfo(
+                "Service message deleted successfully",
+                chat_id=msg.chat.id,
+                content_type=msg.content_type
+            )
+    except TelegramBadRequest as e:
+        await container.logger.ainfo(
+            "Failed to delete service message",
+            chat_id=msg.chat.id,
+            content_type=msg.content_type,
+            error=str(e)
+        )
+        return
+    
+    if not await container.services.settings.get(msg.chat.id):
+        return
+    
+    result = await container.services.settings.change_chat_title(
+        msg.chat.id, msg.chat.title
+    )
+    if not result:
+        return

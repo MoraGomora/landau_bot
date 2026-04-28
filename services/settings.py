@@ -115,6 +115,23 @@ class SettingsService:
             {"has_chat_dialog": status}
         )
     
+    async def change_chat_title(self, chat_id: int, new_title: str) -> Settings | None:
+        doc = await self.get(chat_id)
+
+        if not doc:
+            return
+        
+        doc.chat_name = new_title
+
+        result = await self.repo.update(
+            {"chat_id": chat_id},
+            {"chat_name": doc.chat_name}
+        )
+        if not result:
+            return
+        
+        return result
+    
     async def is_available(self, chat_id: int) -> bool:
         doc = await self.get(chat_id=chat_id)
 
