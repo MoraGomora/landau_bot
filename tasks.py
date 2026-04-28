@@ -1,7 +1,11 @@
+import time
+
 from aiogram import Bot
+from aiogram.enums import ChatMemberStatus
 
 from core.container import AppContainer
-from handlers.common.ban_service import BanService
+from handlers.common import BanService, utils
+from enums import BanStatus
 
 
 async def check_users_status(bot: Bot, container: AppContainer) -> None:
@@ -17,40 +21,6 @@ async def check_users_status(bot: Bot, container: AppContainer) -> None:
             user.full_name,
             "worker-task"
         )
-
-
-async def delete_message(bot: Bot, container: AppContainer) -> None:
-    all_msgs = container.memory.get_all()
-    if not all_msgs:
-        await container.logger.adebug(
-            "Messages not found"
-        )
-
-        return
-    
-    for chat_id, msg_id in list(all_msgs.items()):
-        if not isinstance(chat_id, int):
-            continue
-
-        ids = msg_id if isinstance(msg_id, list) else [msg_id]
-
-        for mid in ids:
-            result = await bot.delete_message(chat_id=chat_id, message_id=mid)
-            if not result:
-                await container.logger.aerror(
-                    event="Failed to delete a message from chat",
-                    message_id=mid,
-                    chat_id=chat_id
-                )
-                continue
-
-            await container.logger.adebug(
-                event="Message deleted successfully from the chat",
-                message_id=mid,
-                chat_id=chat_id
-            )
-
-        container.memory.delete(chat_id)
 
 
 async def test_db(owners: list, bot: Bot, container: AppContainer) -> None:
@@ -83,3 +53,70 @@ async def test_db(owners: list, bot: Bot, container: AppContainer) -> None:
         "MongoDB is alive",
         status=is_connected
     )
+
+
+async def check_user_ban_status(bot: Bot, container: AppContainer) -> None:
+    chat_users = await container.services.chat_user.get_all()
+    if not chat_users:
+        return
+    
+    for user in chat_users:
+        user_status = await bot.get_chat_member(user.chat_id, user.user_id)
+
+        if not user_status:
+            return
+        
+        if user_status.status in [ChatMemberStatus.KICKED, ChatMemberStatus.RESTRICTED]:
+            status = BanStatus.BANNED
+        else:
+            status = BanStatus.UNBANNED
+        
+        result = await container.services.chat_user.set_ban_status(
+            user.user_id,
+            user.chat_id,
+            status
+        )
+
+        if not result:
+            return
+        
+        await container.logger.adebug(
+            "Chat user status was changed",
+            chat_id=user.chat_id,
+            user_id=user.user_id,
+            user_name=user.full_name,
+            status=status
+        )
+
+
+async def unban_member(bot: Bot, container: AppContainer) -> None:
+    chat_users = await container.services.chat_user.get_all()
+
+    if not chat_users:
+        return
+    
+    for user in chat_users:
+        user_violation = await container.services.chat_user.get_violation_data(
+            user.user_id, user.chat_id, utils.today()
+        )
+
+        if not user_violation:
+            return
+        
+        if not user_violation.until > int(time.time()):
+            return
+        
+        result = await bot.unban_chat_member(
+            user.chat_id, user.user_id
+        )
+
+        if not result:
+            return
+        
+        status = await container.services.chat_user.set_ban_status(
+            user.user_id, user.chat_id, BanStatus.UNBANNED
+        )
+
+        if not status:
+            return
+            

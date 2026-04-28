@@ -43,6 +43,26 @@ def register_tasks(owners: list, bot: Bot, container: AppContainer):
             30
         )
     )
+    container.worker_manager.register(
+        SimpleWorker(
+            "unban-member",
+            lambda: tasks.unban_member(
+                bot,
+                container
+            ),
+            60
+        )
+    )
+    container.worker_manager.register(
+        SimpleWorker(
+            "check-user-ban-status",
+            lambda: tasks.check_user_ban_status(
+                bot,
+                container
+            ),
+            35
+        )
+    )
 
 
 async def on_startup(owners: list, bot: Bot, container: AppContainer, logger: FilteringBoundLogger) -> None:

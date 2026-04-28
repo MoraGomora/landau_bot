@@ -5,7 +5,7 @@ from structlog.typing import FilteringBoundLogger
 from repositories import Repositories, ChatUserRepository
 from models import ChatUser, CreateChatUser, Violation
 from db import CacheStorage
-from enums import Status
+from enums import Status, BanStatus
 
 
 class ChatUserService:
@@ -29,14 +29,16 @@ class ChatUserService:
             full_name: str,
             chat_id: int,
             join_attempts: int = 0,
-            status: Status = Status.NONE
+            status: Status = Status.NONE,
+            ban_status: BanStatus = BanStatus.UNBANNED
     ) -> ChatUser | None:
         data = CreateChatUser(
             user_id=user_id,
             full_name=full_name,
             chat_id=chat_id,
             join_attempts=join_attempts,
-            status=status
+            status=status,
+            ban_status=ban_status
         )
 
         result = await self.repo.create(data)
@@ -149,6 +151,28 @@ class ChatUserService:
         )
 
         return bool(result)
+    
+    async def set_ban_status(self, user_id: int, chat_id: int, status: BanStatus) -> ChatUser | None:
+        doc = await self.get(user_id, chat_id)
+
+        if not doc:
+            return
+        
+        return await self.repo.update(
+            {
+                "user_id": user_id,
+                "chat_id": chat_id
+            },
+            {"ban_status": status}
+        )
+
+    async def get_all(self) -> List[ChatUser] | None:
+        docs = await self.repo.get_many({})
+
+        if docs:
+            return
+        
+        return docs
     
     async def set_violation_data(self, user_id: int, chat_id: int, time: str, data: Violation) -> bool:
         key = f"key:{time}:{chat_id}:{user_id}"

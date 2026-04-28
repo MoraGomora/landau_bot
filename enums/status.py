@@ -8,3 +8,8 @@ class Status(StrEnum):
     COUNTING = "counting"
     DONE = "done"
     FAILED = "failed"
+
+
+class BanStatus(StrEnum):
+    BANNED = "banned"
+    UNBANNED = "unbanned"

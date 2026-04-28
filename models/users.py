@@ -4,7 +4,7 @@ from pydantic import BaseModel, Field
 
 from .mongo import BaseMongoModel
 from .types import PyObjectId
-from enums import Status
+from enums import Status, BanStatus
 
 
 class User(BaseMongoModel):
@@ -23,6 +23,7 @@ class ChatUser(BaseMongoModel):
     chat_id: int
     join_attempts: int
     status: Status
+    ban_status: BanStatus
     created_at: datetime
     updated_at: datetime
 
@@ -41,5 +42,6 @@ class CreateChatUser(BaseModel):
     chat_id: int
     join_attempts: int = 0
     status: Status = Status.NONE
+    ban_status: BanStatus = BanStatus.UNBANNED
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))

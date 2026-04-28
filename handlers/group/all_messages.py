@@ -15,6 +15,7 @@ async def all_messages(msg: Message, container: AppContainer) -> None:
     if not await container.services.chat_user.get(msg.from_user.id, msg.chat.id):
         result = await container.services.chat_user.create(
             msg.from_user.id,
+            msg.from_user.full_name,
             msg.chat.id
         )
 

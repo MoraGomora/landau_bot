@@ -92,15 +92,18 @@ class BanService:
         
         return None
     
+    def _duration_to_time(self, duration: int) -> int:
+        return int(time.time()) + duration
+    
     async def _save_violation_data(
         self,
         member_id: int,
         chat_id: int,
         duration: int,
         content_type: str
-    ) -> tuple[bool, int]:
+    ) -> tuple[bool, int | None]:
         """Сохраняет данные о нарушении. Возвращает (успех, до_скольки_секунд)."""
-        until = int(time.time()) + duration
+        until = self._duration_to_time(duration)
         violation = Violation(duration=duration, until=until)
         
         result = await self.container.services.chat_user.set_violation_data(
@@ -117,7 +120,7 @@ class BanService:
                 member_id=member_id,
                 content_type=content_type
             )
-            return False, 0
+            return False, None
         
         await self.container.logger.ainfo(
             "New data about user violation saved successfully. Starting ban...",
@@ -143,19 +146,21 @@ class BanService:
             return False
         
         try:
+            ban_until = datetime.fromtimestamp(until)
             banned = await self.bot.ban_chat_member(
                 chat_id, member_id,
-                datetime.fromtimestamp(until)
+                ban_until
             )
             return bool(banned)
         
-        except TelegramBadRequest as e:
+        except (TelegramBadRequest, ValueError, OSError, OverflowError) as e:
             await self.container.logger.aerror(
                 "Failed to ban member",
                 chat_id=chat_id,
                 content_type=content_type,
                 member=member_id,
-                error=str(e)
+                error=str(e),
+                until_timestamp=until
             )
             return False
     
@@ -244,7 +249,7 @@ class BanService:
             return False
         
         ids = self.container.memory.get(chat_id)
-        
+
         self.container.task_manager.shedule(
             f"delete_msg:{chat_id}:{member_id}",
             lambda: self.bot.delete_message(
@@ -294,15 +299,17 @@ class BanService:
         if await self.container.services.settings.get_has_send_dynamic_violation_time(chat_id):
             prev_duration = await self._get_previous_duration(member_id, chat_id)
             duration = next_ban_duration(prev_duration)
+
+            # 4. Сохраняем данные о нарушении
+            success, until = await self._save_violation_data(
+                member_id, chat_id, duration, content_type
+            )
+
+            if not success or not until:
+                return
         else:
             duration = random.randint(30, 120)
-        
-        # 4. Сохраняем данные о нарушении
-        success, until = await self._save_violation_data(
-            member_id, chat_id, duration, content_type
-        )
-        if not success:
-            return
+            until = self._duration_to_time(duration)
         
         # 5. Выполняем бан в Telegram
         if not await self._perform_ban(
