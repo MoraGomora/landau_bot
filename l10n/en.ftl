@@ -11,24 +11,25 @@ hello-owner =
     You have full access to bot administration.
 
 choose-chat =
-    Select the chat you want to customize:
+    <b>💬 Select the chat you want to customize:</b>
 
 choose-setting =
-    Select the setting you are interested in:
+    <b>⚙️ Select the setting you are interested in:</b>
 
-on = On
-off = Off
+on = <b>✔️ On</b>
+off = <b>✘ Off</b>
 
 send-violation-msg =
-    Sending a ban message: { $violation_status }
+    📨 Sending a ban message: <code>{ $violation_status }</code>
     
 turn-dynamic-violation-msg =
-    Dynamic ban time: { $dynamic_violation_status }
+    ⏱️ Dynamic ban time: <code>{ $dynamic_violation_status }</code>
 
 current-setting-status =
-    The current status of this setting is: { $status }
+    <b>📌 Current Status</b>
+    Status: <code>{ $status }</code>
 
-    <i>All data is saved automatically</i>
+    <i>✅ All data is saved automatically</i>
 
 ## Admin messages
 ping-msg =
@@ -48,22 +49,23 @@ media-msg =
 ## Error messages
 error-generic =
     <b>❌ Error</b>
-    Something went wrong. Please try again later.
+    <i>Something went wrong. Please try again later.</i>
 
 error-permission =
     <b>🚫 Access Denied</b>
     You don't have permission to use this command.
 
 chats-not-found =
-    Your chats were not found. Most likely, you did not add the bot to your chat.
+    <b>🔍 Chats not found</b>
+    <i>Most likely, you did not add the bot to your chat.</i>
 
 ## Confirmation
 confirm-yes = ✅ Confirm
 confirm-no = ❌ Cancel
-confirm-prompt = Are you sure you want to proceed?
+confirm-prompt = <b>❓ Are you sure you want to proceed?</b>
 
-settings-btn = Settings
-support-btn = Bot support
+settings-btn = ⚙️ Settings
+support-btn = 🆘 Bot support
 back-btn = ⬅️ Back
 
 duration-hours =
@@ -85,18 +87,19 @@ duration-seconds =
     }
 
 violation-msg =
-    Hello, { $user }. You have been removed from the group because this chat is used only for comments.
-    Please do not join this chat or add anyone else. Please only comment on posts. Otherwise, the time limit will increase with each attempt to enter.
-    The limit will be lifted in { $duration_msg }
+    <b>🚫 Hello, { $user }.</b> You have been removed from the group because <i>this chat is used only for comments.</i>
+    <b>⚠️ Please do not join this chat or add anyone else.</b> Please only comment on posts. Otherwise, the time limit will increase with each attempt to enter.
+    <b>⏰ The limit will be lifted in</b> <code>{ $duration_msg }</code>
 
 failed-to-ban =
-    Failed to ban user. Reason (from Telegram): { e }
+    <b>⚠️ Failed to ban user</b>
+    <i>Reason (from Telegram):</i> <code>{ e }</code>
 
 cannot-get-owner =
-    Failed to get group owner
+    <b>⚠️ Failed to get group owner</b>
 
 data-not-saved =
-    Failed to save/create chat settings
+    <b>💾 Failed to save/create chat settings</b>
 
 cannot-count-join-attempt =
     Failed to count attempt to join group

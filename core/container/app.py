@@ -7,7 +7,7 @@ from structlog.typing import FilteringBoundLogger
 
 from fluent.runtime import FluentLocalization
 
-from core import Translator, SimpleWorkerManager
+from core import Translator, SimpleWorkerManager, SimpleTaskManager
 from repositories import Repositories
 from services import Services
 from config_reader import MongoConfig
@@ -44,6 +44,7 @@ class AppContainer:
         self._repos = None
         self._services = None
         self._worker_manager = None
+        self._task_manager = None
 
     @property
     def translator(self) -> Translator:
@@ -82,8 +83,17 @@ class AppContainer:
                 self.logger
             )
         )
+    
+    @property
+    def task_manager(self) -> SimpleTaskManager:
+        return self.get(
+            "task_manager",
+            lambda: SimpleTaskManager(
+                self.logger
+            )
+        )
 
-    def get(self, name: str, factory):
+    def get(self, name: str, factory) -> Callable[[], Awaitable[None]]:
         if name not in self._cache:
             self._cache[name] = factory()
         return self._cache[name]

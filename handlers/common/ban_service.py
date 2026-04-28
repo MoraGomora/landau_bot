@@ -229,6 +229,33 @@ class BanService:
         
         if msg:
             self.container.memory.set(chat_id, msg.message_id)
+
+    async def _delete_message_task(
+            self,
+            chat_id: int,
+            member_id: int
+    ) -> None:
+        if not self.container.memory.get(chat_id):
+            await self.container.logger.aerror(
+                "Message ID was not found on memory. Maybe, the violation message was not sent",
+                chat_id=chat_id,
+                member_id=member_id
+            )
+            return
+        
+        self.container.task_manager.shedule(
+            f"delete_msg:{chat_id}:{member_id}",
+            lambda: self.bot.delete_message(
+                chat_id,
+                self.container.memory.get(chat_id)
+            ),
+            30
+        )
+        await self.container.logger.adebug(
+            "Deleting violation message task created successfully for user in the chat",
+            chat_id=chat_id,
+            member_id=member_id
+        )
     
     async def ban_member(
         self,
@@ -285,4 +312,6 @@ class BanService:
             return
         
         # 6. Завершаем бан
-        await self._finalize_ban(member_id, chat_id, member_name, duration)
+        finalized = await self._finalize_ban(member_id, chat_id, member_name, duration)
+        if finalized:
+            await self._delete_message_task(chat_id, member_id)
