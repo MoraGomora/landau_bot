@@ -97,3 +97,81 @@ class SimpleWorkerManager:
             "All workers stopped",
             workers_count=len(self._workers)
         )
+
+
+class SimpleTaskManager:
+
+    def __init__(self, logger: FilteringBoundLogger) -> None:
+        self._tasks: Dict[str, asyncio.Task] = {}
+        self.logger = logger
+
+    def shedule(self, name: str, func: Callable, delay: int) -> None:
+        async def _run():
+            await asyncio.sleep(delay)
+            try:
+                await func()
+            except Exception as e:
+                self.logger.error(
+                    "Task has an error",
+                    task=name,
+                    error=str(e)
+                )
+            finally:
+                self._tasks.pop(name, None)
+
+        if name in self._tasks:
+            self._tasks.get(name).cancel()
+        
+        self._tasks[name] = asyncio.create_task(_run(), name=name)
+
+        self.logger.debug(
+            "Task created with delay",
+            name=name,
+            delay=delay
+        )
+
+    def cancel(self, name: str) -> None:
+        task = self._tasks.pop(name)
+        if not task:
+            self.logger.error(
+                "Task with this name is unavailable",
+                name=name
+            )
+
+            return
+        
+        cancelled = task.cancel()
+        if not cancelled:
+            self.logger.error(
+                "Task was not cancelled",
+                name=name
+            )
+            
+            return
+        
+        self.logger.debug(
+            "Task cancelled successfully",
+            name=name
+        )
+
+    def cancel_all(self) -> None:
+        for name, task in self._tasks.items():
+            cancelled = task.cancel()
+            if not cancelled:
+                self.logger.error(
+                    "Task was not cancelled",
+                    name=name
+                )
+
+                return
+            
+            self.logger.debug(
+                "Task cancelled successfully",
+                name=name
+            )
+
+        self._tasks.clear()
+
+        self.logger.debug(
+            "All tasks cancelled successfully"
+        )

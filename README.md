@@ -24,6 +24,8 @@
 - [📊 Команды бота](#-команды-бота)
 - [🔧 Расширение функционала](#-расширение-функционала)
 - [🔄 Фоновые задачи (Workers)](#-фоновые-задачи-workers)
+  - [⏰ SimpleWorker - Периодические задачи](#-simpleworker---периодические-задачи)
+  - [⏱️ SimpleTaskManager - Отложенные задачи](#️-simpletaskmanager---отложенные-задачи)
 - [🧪 Разработка и тестирование](#-разработка-и-тестирование)
 - [📚 Зависимости проекта](#-зависимости-проекта)
 - [🐛 Решение проблем](#-решение-проблем)
@@ -511,7 +513,11 @@ await msg.answer(message_text)
 - Мониторинга (проверка подключения к БД)
 - Любых повторяющихся задач
 
-### Как работают воркеры
+### ⏰ SimpleWorker - Периодические задачи
+
+**SimpleWorker** предназначен для выполнения асинхронных функций с постоянным повторением через заданный интервал.
+
+#### Как работают воркеры
 
 Каждый воркер (`SimpleWorker`) запускается в отдельной асинхронной задаче (`asyncio.Task`) и выполняется в цикле:
 
@@ -522,7 +528,7 @@ await msg.answer(message_text)
 5. **Обработка ошибок** - менеджер ловит исключения и логирует их
 6. **Остановка** - все воркеры останавливаются при выключении бота
 
-### Атрибуты SimpleWorker
+#### Атрибуты SimpleWorker
 
 | Атрибут | Тип | Описание |
 |---------|-----|---------|
@@ -532,7 +538,7 @@ await msg.answer(message_text)
 | `_lock` | `asyncio.Lock` | Блокировка для синхронизации (по умолчанию новая Lock, но можно передать свою для координации между воркерами. Если вы передаёте свой Lock - рекомендуется его создать в `AppContainer`, чтобы один и тот же блокировщик был доступен с любой точки бота) |
 | `_task` | `asyncio.Task \| None` | Текущая задача asyncio (устанавливается при запуске) |
 
-### Как подключать воркеры
+#### Как подключать воркеры
 
 ##### Вариант 1: Через менеджер (рекомендуется) ✅
 
@@ -569,7 +575,7 @@ worker = SimpleWorker("my-task", my_function, 30)
 task = worker.start()  # Без контроля менеджера
 ```
 
-### Пример: Создание простого воркера
+#### Пример: Создание простого воркера
 
 ```python
 # tasks.py или в коде bot.py
@@ -604,7 +610,7 @@ async def on_startup(owners: list, bot: Bot, container: AppContainer, logger: Fi
     # ... остальной код
 ```
 
-### Пример: Синхронизация между воркерами
+#### Пример: Синхронизация между воркерами
 
 Если нужно, чтобы два воркера не выполнялись одновременно, используйте общую `asyncio.Lock`:
 
@@ -619,6 +625,131 @@ container.worker_manager.register(
 container.worker_manager.register(
     SimpleWorker("task-2", task_2_func, 45, lock=shared_lock)
 )
+```
+
+### ⏱️ SimpleTaskManager - Отложенные задачи
+
+`SimpleTaskManager` предназначен для выполнения асинхронных функций с **определённой задержкой** (в отличие от воркеров, которые выполняются в цикле). Это удобно для одноразовых отложенных операций.
+
+#### Основные различия между SimpleWorker и SimpleTaskManager
+
+| Характеристика | SimpleWorker | SimpleTaskManager |
+|---|---|---|
+| **Тип выполнения** | Циклическое (повторяется) | Одноразовое (с задержкой) |
+| **Интервал** | Постоянный интервал | Фиксированная задержка перед выполнением |
+| **Использование** | Мониторинг, периодические проверки | Отложенные действия (удаление сообщений, отправка напоминаний) |
+| **Менеджер** | SimpleWorkerManager | SimpleTaskManager |
+
+#### Методы SimpleTaskManager
+
+| Метод | Параметры | Описание |
+|-------|-----------|---------|
+| `shedule(name, func, delay)` | `name: str` - уникальное имя<br>`func: Callable` - асинхронная функция<br>`delay: int` - задержка в секундах | Создаёт задачу с задержкой. Если задача с таким именем уже существует, она отменяется и создаётся новая |
+| `cancel(name)` | `name: str` - имя задачи | Отменяет конкретную задачу по имени |
+| `cancel_all()` | — | Отменяет все активные задачи |
+
+#### Как работает SimpleTaskManager
+
+1. **Создание задачи** — вызовите `schedule(name, func, delay)`
+2. **Задержка** — функция ждёт `delay` секунд
+3. **Выполнение** — после задержки функция выполняется
+4. **Обработка ошибок** — если функция выбросит исключение, оно логируется
+5. **Очистка** — после выполнения задача удаляется из менеджера
+
+#### Пример: Удаление сообщения через время
+
+```python
+from core.container import AppContainer
+
+async def delete_message_after_delay(message_id: int, chat_id: int, container: AppContainer):
+    """Удалить сообщение через определённое время."""
+    try:
+        await container.bot.delete_message(chat_id, message_id)
+        await container.logger.ainfo(
+            "Message deleted",
+            message_id=message_id,
+            chat_id=chat_id
+        )
+    except Exception as e:
+        await container.logger.aerror(
+            "Failed to delete message",
+            message_id=message_id,
+            chat_id=chat_id,
+            error=str(e)
+        )
+
+# В обработчике команды
+async def cmd_temp_message(msg: Message, container: AppContainer):
+    """Отправить временное сообщение, которое удалится через 30 секунд."""
+    temp_msg = await msg.answer("Это временное сообщение! 🕐")
+    
+    # Планируем удаление через 30 секунд
+    container.task_manager.shedule(
+        name=f"delete-msg-{temp_msg.message_id}",
+        func=lambda: delete_message_after_delay(temp_msg.message_id, msg.chat.id, container),
+        delay=30
+    )
+```
+
+#### Пример: Отправка напоминания пользователю
+
+```python
+async def send_reminder(user_id: int, text: str, bot: Bot, container: AppContainer):
+    """Отправить напоминание пользователю."""
+    try:
+        await bot.send_message(user_id, f"📢 Напоминание: {text}")
+        await container.logger.ainfo("Reminder sent", user_id=user_id)
+    except Exception as e:
+        await container.logger.aerror("Failed to send reminder", user_id=user_id, error=str(e))
+
+# В обработчике
+async def cmd_remind(msg: Message, container: AppContainer, bot: Bot):
+    """Установить напоминание на 5 минут."""
+    user_id = msg.from_user.id
+    reminder_text = "Не забудьте выполнить задачу!"
+    
+    # Планируем напоминание через 300 секунд (5 минут)
+    container.task_manager.shedule(
+        name=f"reminder-{user_id}",
+        func=lambda: send_reminder(user_id, reminder_text, bot, container),
+        delay=300  # 5 минут в секундах
+    )
+    
+    await msg.answer("⏰ Напоминание установлено на 5 минут!")
+```
+
+#### Пример: Замена одной задачи на другую
+
+```python
+# Первая попытка напоминания
+container.task_manager.shedule(
+    name="user-reminder",  # Уникальное имя
+    func=lambda: send_reminder(user_id, "Первое напоминание", bot, container),
+    delay=60
+)
+
+# Если пользователь нажал кнопку "Отложить", отменяем старое и создаём новое
+container.task_manager.shedule(
+    name="user-reminder",  # То же имя - старая задача отменится
+    func=lambda: send_reminder(user_id, "Отложенное напоминание", bot, container),
+    delay=600  # Новая задержка 10 минут
+)
+```
+
+> 💡 **Совет:** Используйте уникальные имена в формате `entity-action-id` (например: `delete-msg-123`, `user-reminder-456`), чтобы легко управлять задачами по смыслу.
+
+#### Пример: Отмена задачи
+
+```python
+# Отменить одну задачу
+if user_agreed:
+    container.task_manager.cancel(f"warning-message-{user_id}")
+    await msg.answer("✅ Напоминание отменено!")
+
+# Отменить все задачи
+async def on_shutdown(container: AppContainer):
+    container.task_manager.cancel_all()
+    await container.logger.ainfo("All scheduled tasks cancelled")
 ```
 
 ## 🧪 Разработка и тестирование

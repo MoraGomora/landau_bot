@@ -1,8 +1,11 @@
 from .i18n import Translator
 from .worker import SimpleWorker
-from .managers import SimpleWorkerManager
+from .managers import SimpleWorkerManager, SimpleTaskManager
 
 
 __all__ = [
-    "Translator"
+    "Translator",
+    "SimpleWorker",
+    "SimpleWorkerManager",
+    "SimpleTaskManager"
 ]

@@ -34,16 +34,6 @@ def register_tasks(owners: list, bot: Bot, container: AppContainer):
     )
     container.worker_manager.register(
         SimpleWorker(
-            "delete-messages",
-            lambda: tasks.delete_message(
-                bot,
-                container
-            ),
-            45
-        )
-    )
-    container.worker_manager.register(
-        SimpleWorker(
             "test-db-connection",
             lambda: tasks.test_db(
                 owners,
