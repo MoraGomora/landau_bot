@@ -62,6 +62,7 @@ async def on_shutdown(bot: Bot, container: AppContainer, logger: FilteringBoundL
     """Actions to perform on bot shutdown."""
     
     container.worker_manager.stop_all()
+    container.task_manager.cancel_all()
 
     me = await bot.get_me()
     await logger.ainfo(

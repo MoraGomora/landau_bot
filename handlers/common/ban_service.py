@@ -1,4 +1,5 @@
 import time
+import random
 from datetime import datetime
 
 from aiogram import Bot
@@ -203,10 +204,9 @@ class BanService:
         duration: int
     ) -> None:
         """Отправляет сообщение о нарушении в чат."""
-        has_send_violation_msg = await self.container.services.settings.get_has_send_violation_msg(
+        if not await self.container.services.settings.get_has_send_violation_msg(
             chat_id
-        )
-        if not has_send_violation_msg:
+        ):
             return
         
         user = self.container.translator.mention(member_id, member_name)
@@ -234,28 +234,33 @@ class BanService:
             self,
             chat_id: int,
             member_id: int
-    ) -> None:
+    ) -> bool:
         if not self.container.memory.get(chat_id):
             await self.container.logger.aerror(
                 "Message ID was not found on memory. Maybe, the violation message was not sent",
                 chat_id=chat_id,
                 member_id=member_id
             )
-            return
+            return False
+        
+        ids = self.container.memory.get(chat_id)
         
         self.container.task_manager.shedule(
             f"delete_msg:{chat_id}:{member_id}",
             lambda: self.bot.delete_message(
                 chat_id,
-                self.container.memory.get(chat_id)
+                ids
             ),
             30
         )
+            
         await self.container.logger.adebug(
             "Deleting violation message task created successfully for user in the chat",
             chat_id=chat_id,
             member_id=member_id
         )
+
+        return True
     
     async def ban_member(
         self,
@@ -285,9 +290,12 @@ class BanService:
         ):
             return
         
-        # 3. Получаем предыдущую длительность и рассчитываем новую
-        prev_duration = await self._get_previous_duration(member_id, chat_id)
-        duration = next_ban_duration(prev_duration)
+        # 3. Получаем предыдущую длительность и рассчитываем новую (если настройка "Динамическое время бана" включена)
+        if await self.container.services.settings.get_has_send_dynamic_violation_time(chat_id):
+            prev_duration = await self._get_previous_duration(member_id, chat_id)
+            duration = next_ban_duration(prev_duration)
+        else:
+            duration = random.randint(30, 120)
         
         # 4. Сохраняем данные о нарушении
         success, until = await self._save_violation_data(
@@ -314,4 +322,9 @@ class BanService:
         # 6. Завершаем бан
         finalized = await self._finalize_ban(member_id, chat_id, member_name, duration)
         if finalized:
-            await self._delete_message_task(chat_id, member_id)
+            result = await self._delete_message_task(chat_id, member_id)
+
+            if not result:
+                return
+            
+            self.container.memory.delete(chat_id)

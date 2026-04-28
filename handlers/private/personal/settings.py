@@ -7,28 +7,54 @@ from core.container import AppContainer
 from models import Settings
 
 from .state import SettingsStates
+from .utils import get_status_label
 
 router = Router(name="settings")
 
-# Константы для действий
-SETTINGS_ACTIONS = {
-    "send_violation_message": "violation_message",
-    "turn_dynamic_violation": "dynamic_violation"
+# Mapping между ключами настроек и методами сервиса
+# Формат: "setting_key": ("db_field", "service_method")
+SETTINGS_UPDATES = {
+    "send_violation_message": {
+        "field": "has_send_violation_msg",
+        "service_method": "change_has_send_violation_msg"
+    },
+    "dynamic_violation": {
+        "field": "has_dynamic_violation_time",
+        "service_method": "change_has_dynamic_violation"
+    }
 }
 
 
-def _get_status_label(container: AppContainer, is_enabled: bool) -> str:
-    """Возвращает локализованный статус (включено/отключено)."""
-    return container.translator.call("on" if is_enabled else "off")
-
-
-async def _handle_send_violation_message_action(
+async def _handle_setting_action(
     call: CallbackQuery,
     chat: Settings,
-    container: AppContainer
+    container: AppContainer,
+    setting_key: str
 ) -> None:
-    """Обработка действия отправки сообщения о нарушении."""
-    status = _get_status_label(container, chat.has_send_violation_msg)
+    """Универсальный обработчик действий с настройками."""
+    config = SETTINGS_UPDATES.get(setting_key)
+    if not config:
+        await container.logger.awarning(
+            "Unknown settings key",
+            setting_key=setting_key,
+            chat_id=chat.chat_id
+        )
+        await call.answer()
+        return
+    
+    field = config["field"]
+    current_value = getattr(chat, field, None)
+    
+    if current_value is None:
+        await container.logger.awarning(
+            "Field not found on chat settings",
+            field=field,
+            chat_id=chat.chat_id
+        )
+        await call.answer()
+        return
+    
+    status = get_status_label(container, current_value)
 
     await call.message.answer(
         container.translator.call(
@@ -39,7 +65,8 @@ async def _handle_send_violation_message_action(
         reply_markup=get_settings_confirm_kb(
             container.translator.call("on"),
             container.translator.call("off"),
-            chat.has_send_violation_msg,
+            current_value,
+            setting_key=setting_key,
             is_back=True,
             back_text=container.translator.call("back-btn")
         )
@@ -47,54 +74,62 @@ async def _handle_send_violation_message_action(
     await call.answer()
 
 
-async def _handle_dynamic_violation_action(
-    call: CallbackQuery,
-    chat: Settings,
-    container: AppContainer
-) -> None:
-    """Обработка действия динамического нарушения."""
-    # TODO: Реализовать логику для динамического нарушения
-    # На данный момент эта функция заглушка
-    await container.logger.adebug(
-        "Dynamic violation action not yet implemented",
-        chat_id=chat.chat_id
-    )
-    await call.message.answer(
-        "Feature in development"
-    )
-    await call.answer()
-
-
-async def _update_violation_message_setting(
+async def _update_setting(
     container: AppContainer,
     chat_id: int,
+    setting_key: str,
     current_status: bool
 ) -> tuple[bool, str]:
     """
-    Обновляет настройку отправки сообщения о нарушении.
+    Универсальное обновление настройки через сервис.
+    
+    Args:
+        container: AppContainer
+        chat_id: ID чата
+        setting_key: Ключ настройки из SETTINGS_UPDATES
+        current_status: Текущее значение
     
     Returns:
         Кортеж (успех, новый_статус)
     """
+    config = SETTINGS_UPDATES.get(setting_key)
+    if not config:
+        await container.logger.awarning(
+            "Unknown settings key",
+            setting_key=setting_key,
+            chat_id=chat_id
+        )
+        return False, ""
+    
+    service_method = config["service_method"]
     new_value = not current_status
     
-    result = await container.services.settings.change_has_send_violation_msg(
-        chat_id,
-        new_value
-    )
+    # Вызываем нужный метод сервиса динамически
+    method = getattr(container.services.settings, service_method, None)
+    if not method:
+        await container.logger.aerror(
+            "Service method not found",
+            method=service_method,
+            chat_id=chat_id
+        )
+        return False, ""
+    
+    result = await method(chat_id, new_value)
     
     if not result:
         await container.logger.aerror(
-            "Failed to update violation message setting",
+            "Failed to update setting",
+            setting_key=setting_key,
             chat_id=chat_id,
             new_value=new_value
         )
         return False, ""
     
-    status = _get_status_label(container, new_value)
+    status = get_status_label(container, new_value)
     
     await container.logger.ainfo(
-        "Violation message setting updated",
+        "Setting updated",
+        setting_key=setting_key,
         chat_id=chat_id,
         new_value=new_value
     )
@@ -115,21 +150,8 @@ async def main_settings(
     data = await state.get_data()
     chat = Settings.model_validate(data.get("chat"))
 
-    action_handlers = {
-        "send_violation_message": _handle_send_violation_message_action,
-        "turn_dynamic_violation": _handle_dynamic_violation_action,
-    }
-
-    handler = action_handlers.get(callback_data.action)
-    if handler:
-        await handler(call, chat, container)
-    else:
-        await container.logger.awarning(
-            "Unknown settings action",
-            action=callback_data.action,
-            chat_id=chat.chat_id
-        )
-        await call.answer()
+    # Используем callback_data.action как ключ для поиска в SETTINGS_UPDATES
+    await _handle_setting_action(call, chat, container, callback_data.action)
 
 
 @router.callback_query(SettingsConfirmCallback.filter())
@@ -139,20 +161,22 @@ async def confirm_settings(
     state: FSMContext,
     container: AppContainer
 ) -> None:
-    """Обработчик подтверждения изменения настроек."""
+    """Универсальный обработчик подтверждения изменения настроек."""
     data = await state.get_data()
     chat = Settings.model_validate(data.get("chat"))
 
-    success, status = await _update_violation_message_setting(
+    success, status = await _update_setting(
         container,
         chat.chat_id,
+        callback_data.setting_key,
         callback_data.status
     )
 
     if not success:
         await container.logger.aerror(
             "Settings update failed",
-            chat_id=chat.chat_id
+            chat_id=chat.chat_id,
+            setting_key=callback_data.setting_key
         )
         await call.answer(
             container.translator.call("settings-update-failed"),
@@ -171,6 +195,14 @@ async def confirm_settings(
         )
         return
 
+    # Получаем обновленное значение поля из конфига
+    config = SETTINGS_UPDATES.get(callback_data.setting_key)
+    if config:
+        field = config["field"]
+        updated_value = getattr(updated_settings, field, callback_data.status)
+    else:
+        updated_value = callback_data.status
+
     await call.message.edit_text(
         container.translator.call(
             "current-setting-status",
@@ -180,7 +212,8 @@ async def confirm_settings(
         reply_markup=get_settings_confirm_kb(
             container.translator.call("on"),
             container.translator.call("off"),
-            updated_settings.has_send_violation_msg,
+            updated_value,
+            setting_key=callback_data.setting_key,
             is_back=True,
             back_text=container.translator.call("back-btn")
         )

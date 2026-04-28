@@ -16,6 +16,8 @@ choose-chat =
 choose-setting =
     <b>⚙️ Select the setting you are interested in:</b>
 
+    <i>NOTE: When the "Dynamic ban time" setting is disabled, the ban time is generated randomly from 30 seconds to 2 minutes</i>
+
 on = ✔️ On
 off = ✘ Off
 
@@ -88,7 +90,7 @@ duration-seconds =
 
 violation-msg =
     <b>🚫 Hello, { $user }.</b> You have been removed from the group because <i>this chat is used only for comments.</i>
-    <b>⚠️ Please do not join this chat or add anyone else.</b> Please only comment on posts. Otherwise, the time limit will increase with each attempt to enter.
+    <b>⚠️ Please do not join this chat or add anyone else.</b> Please only comment on posts. Otherwise, the time limit will increase with each attempt to enter (if the group owner has not disabled this setting).
     <b>⏰ The limit will be lifted in</b> <code>{ $duration_msg }</code>
 
 failed-to-ban =

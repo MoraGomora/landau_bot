@@ -8,6 +8,7 @@ class SettingsCallback(CallbackData, prefix="settings"):
 
 
 class SettingsConfirmCallback(CallbackData, prefix="settings_confirm"):
+    setting_key: str  # Ключ настройки: "send_violation_message", "dynamic_violation", и т.д.
     status: bool
 
 
@@ -26,7 +27,7 @@ def get_settings_kb(
     )
     builder.button(
         text=turn_status_dynamic_violation_text,
-        callback_data=SettingsCallback(action="turn_dynamic_violation")
+        callback_data=SettingsCallback(action="dynamic_violation")
     )
 
     if is_back:
@@ -44,6 +45,7 @@ def get_settings_confirm_kb(
     turn_on: str = "On",
     turn_off: str = "Off",
     status: bool = True,
+    setting_key: str = "",
     *,
     is_back: bool = True,
     back_text: str = "Back"
@@ -52,7 +54,7 @@ def get_settings_confirm_kb(
 
     builder.button(
         text=turn_on if not status else turn_off,
-        callback_data=SettingsConfirmCallback(status=status)
+        callback_data=SettingsConfirmCallback(setting_key=setting_key, status=status)
     )
 
     if is_back:
