@@ -20,10 +20,10 @@ on = ✔️ Вкл.
 off = ✘ Выкл.
 
 send-violation-msg =
-    📨 Отправка сообщения о бане: <code>{ $violation_status }</code>
+    📨 Отправка сообщения о бане: { $violation_status }
     
 turn-dynamic-violation-msg =
-    ⏱️ Динамическое время бана: <code>{ $dynamic_violation_status }</code>
+    ⏱️ Динамическое время бана: { $dynamic_violation_status }
 
 current-setting-status =
     <b>📌 Текущее положение настройки для чата <i>{ $chat_name }</i></b>
