@@ -33,6 +33,7 @@ async def _handle_send_violation_message_action(
     await call.message.answer(
         container.translator.call(
             "current-setting-status",
+            chat_name=chat.chat_name,
             status=status
         ),
         reply_markup=get_settings_confirm_kb(
@@ -173,6 +174,7 @@ async def confirm_settings(
     await call.message.edit_text(
         container.translator.call(
             "current-setting-status",
+            chat_name=chat.chat_name,
             status=status
         ),
         reply_markup=get_settings_confirm_kb(

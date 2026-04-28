@@ -16,17 +16,17 @@ choose-chat =
 choose-setting =
     <b>⚙️ Select the setting you are interested in:</b>
 
-on = <b>✔️ On</b>
-off = <b>✘ Off</b>
+on = ✔️ On
+off = ✘ Off
 
 send-violation-msg =
-    📨 Sending a ban message: <code>{ $violation_status }</code>
+    📨 Sending a ban message: { $violation_status }
     
 turn-dynamic-violation-msg =
-    ⏱️ Dynamic ban time: <code>{ $dynamic_violation_status }</code>
+    ⏱️ Dynamic ban time: { $dynamic_violation_status }
 
 current-setting-status =
-    <b>📌 Current Status</b>
+    <b>📌 Current setting status for the chat <i>{ $chat_name }</i></b>
     Status: <code>{ $status }</code>
 
     <i>✅ All data is saved automatically</i>

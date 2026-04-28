@@ -16,8 +16,8 @@ choose-chat =
 choose-setting =
     <b>⚙️ Выбери интересующую тебя настройку:</b>
 
-on = <b>✔️ Вкл.</b>
-off = <b>✘ Выкл.</b>
+on = ✔️ Вкл.
+off = ✘ Выкл.
 
 send-violation-msg =
     📨 Отправка сообщения о бане: <code>{ $violation_status }</code>
@@ -26,7 +26,7 @@ turn-dynamic-violation-msg =
     ⏱️ Динамическое время бана: <code>{ $dynamic_violation_status }</code>
 
 current-setting-status =
-    <b>📌 Текущее положение</b>
+    <b>📌 Текущее положение настройки для чата <i>{ $chat_name }</i></b>
     Статус: <code>{ $status }</code>
     
     <i>✅ Все данные сохраняются автоматически</i>
