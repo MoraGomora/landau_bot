@@ -1,3 +1,4 @@
+import base64
 from enum import StrEnum, auto
 from functools import lru_cache
 from os import environ
@@ -92,6 +93,7 @@ def parse_config_file() -> dict:
     file_path = get_config_path()
 
     if not file_path.exists():
+        decode_base64_config("CONFIG_B64")
         raise FileNotFoundError(f"Config file not found: {file_path}")
 
     with open(file_path, "rb") as file:
@@ -119,6 +121,19 @@ def get_config(model: Type[ConfigType], root_key: str) -> ConfigType:
         raise KeyError(f"Configuration key '{root_key}' not found in config file")
 
     return model.model_validate(config_dict[root_key])
+
+
+def decode_base64_config(env_key: str) -> None:
+    config_data = base64.b64decode(environ.get(env_key)).decode()
+
+    if not config_data:
+        raise KeyError(f"Configuration by key {env_key} was not found")
+
+    if Path("config.toml").exists():
+        return
+    
+    with open("config.toml", "wb") as f:
+        f.write(config_data)
 
 
 def get_env_or_config(

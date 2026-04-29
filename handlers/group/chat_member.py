@@ -69,15 +69,15 @@ def _shedule_task(
         container: AppContainer
 ) -> int | None:
     if update.new_chat_member.until_date:
-        until_seconds = (update.new_chat_member.until_date - datetime.now(timezone.utc)).total_seconds()
+        until_seconds = (update.new_chat_member.until_date - datetime.now(timezone.utc)).total_seconds() + 10
 
         container.task_manager.shedule(
             f"ban_member:{update.chat.id}:{update.new_chat_member.user.id}",
-            _check_status(update, container),
-            until_seconds
+            lambda: _check_status(update, container),
+            int(until_seconds)
         )
 
-        return until_seconds
+        return int(until_seconds)
     
     return None
 
