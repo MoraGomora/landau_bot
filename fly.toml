@@ -1,9 +1,9 @@
-# fly.toml app configuration file generated for landau-bot-0-s8jw on 2026-04-29T20:38:37Z
+# fly.toml app configuration file generated for landau-bot-gykcmq on 2026-04-29T20:47:15Z
 #
 # See https://fly.io/docs/reference/configuration/ for information about how to use this file.
 #
 
-app = 'landau-bot-0-s8jw'
+app = 'landau-bot-gykcmq'
 primary_region = 'ams'
 
 [build]
