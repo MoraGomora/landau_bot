@@ -108,3 +108,32 @@ cannot-count-join-attempt =
 
 status-was-not-updated =
     Failed to update status
+
+## Restriction notifications in private messages
+
+restriction-notification-title =
+    <b>🚫 Restriction Notification</b>
+
+restriction-notification =
+    <b>🚫 Hello, { $user }!</b> You have received a restriction in the chat <b>{ $chat_name }</b>.
+    
+    <b>📋 Restriction Details:</b>
+    • <b>Restriction will be lifted in:</b> <code>{ $duration_msg }</code>
+    • <b>Administrator:</b> { $admin }
+    • <b>Reason:</b> <i>{ $reason }</i>
+    
+    <b>⚠️ Important:</b> Repeated violations may result in increased restriction time.
+
+restriction-notification-no-admin =
+    <b>🚫 Hello, { $user }!</b> You have received a restriction in the chat <b>{ $chat_name }</b>.
+    
+    <b>📋 Restriction Details:</b>
+    • <b>Restriction will be lifted in:</b> <code>{ $duration_msg }</code>
+    • <b>Reason:</b> <i>{ $reason }</i>
+    
+    <b>⚠️ Important:</b> Repeated violations may result in increased restriction time.
+
+reason =
+    Entering the chat or inviting other participants to it is prohibited.
+
+not = No

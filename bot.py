@@ -60,7 +60,7 @@ def register_tasks(owners: list, bot: Bot, container: AppContainer):
                 bot,
                 container
             ),
-            35
+            30
         )
     )
 

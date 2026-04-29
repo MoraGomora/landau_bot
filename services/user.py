@@ -89,6 +89,14 @@ class UserService:
             {"user_id": user_id},
             {"has_private": status}
         )
+    
+    async def get_has_privtae(self, user_id: int) -> bool:
+        doc = await self.get(user_id)
+
+        if not doc:
+            return
+        
+        return doc.has_private
 
     async def is_available(self, user_id: int) -> bool:
         doc = await self.get(user_id)

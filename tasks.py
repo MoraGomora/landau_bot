@@ -58,13 +58,23 @@ async def test_db(owners: list, bot: Bot, container: AppContainer) -> None:
 async def check_user_ban_status(bot: Bot, container: AppContainer) -> None:
     chat_users = await container.services.chat_user.get_all()
     if not chat_users:
+        await container.logger.aerror(
+            "Failed to get all chat users"
+        )
+
         return
     
     for user in chat_users:
         user_status = await bot.get_chat_member(user.chat_id, user.user_id)
 
         if not user_status:
-            return
+            await container.logger.aerror(
+                "Failed to get chat member from Telegram. Skip current iteration...",
+                user_id=user.user_id,
+                chat_id=user.chat_id
+            )
+
+            continue
         
         if user_status.status in [ChatMemberStatus.KICKED, ChatMemberStatus.RESTRICTED]:
             status = BanStatus.BANNED
@@ -78,7 +88,13 @@ async def check_user_ban_status(bot: Bot, container: AppContainer) -> None:
         )
 
         if not result:
-            return
+            await container.logger.aerror(
+                "Failed to set ban status for chat user. Skip current iteration...",
+                user_id=user.user_id,
+                chat_id=user.chat_id
+            )
+
+            continue
         
         await container.logger.adebug(
             "Chat user status was changed",
@@ -93,6 +109,10 @@ async def unban_member(bot: Bot, container: AppContainer) -> None:
     chat_users = await container.services.chat_user.get_all()
 
     if not chat_users:
+        await container.logger.aerror(
+            "Failed to get all chat users"
+        )
+
         return
     
     for user in chat_users:
@@ -101,22 +121,46 @@ async def unban_member(bot: Bot, container: AppContainer) -> None:
         )
 
         if not user_violation:
+            await container.logger.aerror(
+                "User violation was not found",
+                user_id=user.user_id,
+                chat_id=user.chat_id
+            )
+
             return
         
         if not user_violation.until > int(time.time()):
-            return
+            await container.logger.adebug(
+                "User has an active violation. Skip current iteratiion...",
+                user_id=user.user_id,
+                chat_id=user.chat_id
+            )
+
+            continue
         
         result = await bot.unban_chat_member(
             user.chat_id, user.user_id
         )
 
         if not result:
-            return
+            await container.logger.aerror(
+                "Failed to unban chat member. Skip current iteration...",
+                user_id=user.user_id,
+                chat_id=user.chat_id
+            )
+
+            continue
         
         status = await container.services.chat_user.set_ban_status(
             user.user_id, user.chat_id, BanStatus.UNBANNED
         )
 
         if not status:
-            return
+            await container.logger.aerror(
+                "Failed to set ban status for the user. Skip current iteration...",
+                user_id=user.user_id,
+                chat_id=user.chat_id
+            )
+
+            continue
             

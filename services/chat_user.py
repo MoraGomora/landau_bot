@@ -158,6 +158,16 @@ class ChatUserService:
         if not doc:
             return
         
+        if doc.status == status:
+            await self.logger.awarning(
+                "The status will not be changed, since the value of the transmitted status is equal to the value from the database.",
+                user_id=user_id,
+                chat_id=chat_id,
+                status=doc.status
+            )
+
+            return
+        
         return await self.repo.update(
             {
                 "user_id": user_id,
@@ -169,7 +179,7 @@ class ChatUserService:
     async def get_all(self) -> List[ChatUser] | None:
         docs = await self.repo.get_many({})
 
-        if docs:
+        if not docs:
             return
         
         return docs
