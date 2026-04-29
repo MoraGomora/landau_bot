@@ -9,14 +9,10 @@ from keyboards.settings import get_settings_kb
 
 from .state import SettingsStates
 from .navigation import NavigationService, NavigationState
+from .utils import get_status_label
 
 
 router = Router(name="choose_chat")
-
-
-def _get_status_label(container: AppContainer, is_enabled: bool) -> str:
-    """Возвращает локализованный статус (включено/отключено)."""
-    return container.translator.call("on" if is_enabled else "off")
 
 
 @router.callback_query(ChooseChatCallback.filter(), SettingsStates.CHAT_SETTINGS)
@@ -69,20 +65,22 @@ async def choose_chat_handler(
         has_send_violation_msg=chat.has_send_violation_msg
     )
     
-    violation_status = _get_status_label(container, chat.has_send_violation_msg)
-    
-    dynamic_violation_status = "On"
-    
     await call.message.answer(
         container.translator.call("choose-setting"),
         reply_markup=get_settings_kb(
             container.translator.call(
                 "send-violation-msg",
-                violation_status=violation_status
+                violation_status=get_status_label(
+                    container,
+                    chat.has_send_violation_msg
+                )
             ),
             container.translator.call(
                 "turn-dynamic-violation-msg",
-                dynamic_violation_status=dynamic_violation_status
+                dynamic_violation_status=get_status_label(
+                    container,
+                    chat.has_dynamic_violation_time
+                )
             ),
             is_back=True,
             back_text=container.translator.call("back-btn")

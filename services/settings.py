@@ -23,6 +23,8 @@ class SettingsService:
         chat_name: str,
         owner_id: int,
         has_send_violation_msg: bool = True,
+        has_dynamic_violation_time: bool = False,
+        static_violation_time: int | None = None,
         has_chat_dialog: bool = True
     ) -> Settings | None:
         """Create a new settings record for chat
@@ -46,6 +48,8 @@ class SettingsService:
             chat_name=chat_name,
             owner_id=owner_id,
             has_send_violation_msg=has_send_violation_msg,
+            has_dynamic_violation_time=has_dynamic_violation_time,
+            static_violation_time=static_violation_time,
             has_chat_dialog=has_chat_dialog
         )
 
@@ -68,6 +72,14 @@ class SettingsService:
             return
         
         return doc.has_send_violation_msg
+    
+    async def get_has_send_dynamic_violation_time(self, chat_id: int) -> bool | None:
+        doc = await self.get(chat_id)
+
+        if not doc:
+            return
+        
+        return doc.has_dynamic_violation_time
 
     async def change_has_send_violation_msg(self, chat_id: int, status: bool) -> Settings | None:
         """Change a `has_send_violation_msg` on settings record of chat
@@ -75,11 +87,7 @@ class SettingsService:
         Returs:
             `Settings` when key `has_send_violation_msg` was changed successfully
             `None` when record is not available"""
-        filter = {
-            "chat_id": chat_id
-        }
-
-        doc = await self.repo.get_one(filter)
+        doc = await self.get(chat_id)
 
         if not doc:
             await self.logger.adebug(
@@ -88,7 +96,7 @@ class SettingsService:
             return
 
         return await self.repo.update(
-            filter,
+            {"chat_id": chat_id},
             {"has_send_violation_msg": status}
         )
 
@@ -98,11 +106,7 @@ class SettingsService:
         Returs:
             `Settings` when key `has_chat_dialog` was changed successfully
             `None` when record is not available"""
-        filter = {
-            "chat_id": chat_id
-        }
-
-        doc = await self.repo.get_one(filter)
+        doc = await self.get(chat_id)
 
         if not doc:
             await self.logger.adebug(
@@ -111,8 +115,41 @@ class SettingsService:
             return
 
         return await self.repo.update(
-            filter,
+            {"chat_id": chat_id},
             {"has_chat_dialog": status}
+        )
+    
+    async def change_chat_title(self, chat_id: int, new_title: str) -> Settings | None:
+        doc = await self.get(chat_id)
+
+        if not doc:
+            return
+
+        return await self.repo.update(
+            {"chat_id": chat_id},
+            {"chat_name": new_title}
+        )
+    
+    async def change_has_dynamic_violation(self, chat_id: int, status: bool) -> Settings | None:
+        doc = await self.get(chat_id)
+
+        if not doc:
+            return
+
+        return await self.repo.update(
+            {"chat_id": chat_id},
+            {"has_dynamic_violation_time": status}
+        )
+    
+    async def change_static_violation_time(self, chat_id: int, delay: int | None) -> Settings | None:
+        doc = await self.get(chat_id)
+
+        if not doc:
+            return
+        
+        return await self.repo.update(
+            {"chat_id": chat_id},
+            {"static_violation_time": delay}
         )
     
     async def is_available(self, chat_id: int) -> bool:

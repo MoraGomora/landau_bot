@@ -43,6 +43,26 @@ def register_tasks(owners: list, bot: Bot, container: AppContainer):
             30
         )
     )
+    container.worker_manager.register(
+        SimpleWorker(
+            "unban-member",
+            lambda: tasks.unban_member(
+                bot,
+                container
+            ),
+            60
+        )
+    )
+    container.worker_manager.register(
+        SimpleWorker(
+            "check-user-ban-status",
+            lambda: tasks.check_user_ban_status(
+                bot,
+                container
+            ),
+            30
+        )
+    )
 
 
 async def on_startup(owners: list, bot: Bot, container: AppContainer, logger: FilteringBoundLogger) -> None:
@@ -62,6 +82,7 @@ async def on_shutdown(bot: Bot, container: AppContainer, logger: FilteringBoundL
     """Actions to perform on bot shutdown."""
     
     container.worker_manager.stop_all()
+    container.task_manager.cancel_all()
 
     me = await bot.get_me()
     await logger.ainfo(

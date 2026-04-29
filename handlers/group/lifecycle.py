@@ -6,6 +6,7 @@ from aiogram.exceptions import TelegramBadRequest
 
 from core.container import AppContainer
 from handlers.common.ban_service import BanService
+from config_reader import get_config, BotConfig
 
 
 router = Router(name="lifecycle")
@@ -28,6 +29,17 @@ async def new_members(msg: Message, container: AppContainer) -> None:
             content_type=msg.content_type,
             error=str(e)
         )
+        return
+    
+    bot_config = get_config(model=BotConfig, root_key="bot")
+    if msg.from_user.id in bot_config.owners:
+        await container.logger.ainfo(
+            "Bot owner enter to the chat",
+            owner_id=msg.from_user.id,
+            owner_name=msg.from_user.full_name,
+            chat_id=msg.chat.id
+        )
+
         return
     
     me = await msg.bot.get_me()
@@ -81,6 +93,7 @@ async def new_members(msg: Message, container: AppContainer) -> None:
 
 @router.message(F.content_type == ContentType.LEFT_CHAT_MEMBER)
 async def new_members(msg: Message, container: AppContainer) -> None:
+    print(msg.chat.type)
     me = await msg.bot.get_me()
     if msg.left_chat_member.id == me.id:
         return
@@ -100,4 +113,33 @@ async def new_members(msg: Message, container: AppContainer) -> None:
             content_type=msg.content_type,
             error=str(e)
         )
+        return
+    
+
+@router.message(F.content_type == ContentType.NEW_CHAT_TITLE)
+async def chat_title_changed(msg: Message, container: AppContainer) -> None:
+    try:
+        deleted = await msg.delete()
+        if deleted:
+            await container.logger.ainfo(
+                "Service message deleted successfully",
+                chat_id=msg.chat.id,
+                content_type=msg.content_type
+            )
+    except TelegramBadRequest as e:
+        await container.logger.ainfo(
+            "Failed to delete service message",
+            chat_id=msg.chat.id,
+            content_type=msg.content_type,
+            error=str(e)
+        )
+        return
+    
+    if not await container.services.settings.get(msg.chat.id):
+        return
+    
+    result = await container.services.settings.change_chat_title(
+        msg.chat.id, msg.chat.title
+    )
+    if not result:
         return

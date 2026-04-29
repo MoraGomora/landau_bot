@@ -16,17 +16,19 @@ choose-chat =
 choose-setting =
     <b>⚙️ Select the setting you are interested in:</b>
 
-on = <b>✔️ On</b>
-off = <b>✘ Off</b>
+    <i>NOTE: When the "Dynamic ban time" setting is disabled, the ban time is generated randomly from 30 seconds to 2 minutes</i>
+
+on = ✔️ On
+off = ✘ Off
 
 send-violation-msg =
-    📨 Sending a ban message: <code>{ $violation_status }</code>
+    📨 Sending a ban message: { $violation_status }
     
 turn-dynamic-violation-msg =
-    ⏱️ Dynamic ban time: <code>{ $dynamic_violation_status }</code>
+    ⏱️ Dynamic ban time: { $dynamic_violation_status }
 
 current-setting-status =
-    <b>📌 Current Status</b>
+    <b>📌 Current setting status for the chat <i>{ $chat_name }</i></b>
     Status: <code>{ $status }</code>
 
     <i>✅ All data is saved automatically</i>
@@ -88,7 +90,7 @@ duration-seconds =
 
 violation-msg =
     <b>🚫 Hello, { $user }.</b> You have been removed from the group because <i>this chat is used only for comments.</i>
-    <b>⚠️ Please do not join this chat or add anyone else.</b> Please only comment on posts. Otherwise, the time limit will increase with each attempt to enter.
+    <b>⚠️ Please do not join this chat or add anyone else.</b> Please only comment on posts. Otherwise, the time limit will increase with each attempt to enter (if the group owner has not disabled this setting).
     <b>⏰ The limit will be lifted in</b> <code>{ $duration_msg }</code>
 
 failed-to-ban =
@@ -106,3 +108,32 @@ cannot-count-join-attempt =
 
 status-was-not-updated =
     Failed to update status
+
+## Restriction notifications in private messages
+
+restriction-notification-title =
+    <b>🚫 Restriction Notification</b>
+
+restriction-notification =
+    <b>🚫 Hello, { $user }!</b> You have received a restriction in the chat <b>{ $chat_name }</b>.
+    
+    <b>📋 Restriction Details:</b>
+    • <b>Restriction will be lifted in:</b> <code>{ $duration_msg }</code>
+    • <b>Administrator:</b> { $admin }
+    • <b>Reason:</b> <i>{ $reason }</i>
+    
+    <b>⚠️ Important:</b> Repeated violations may result in increased restriction time.
+
+restriction-notification-no-admin =
+    <b>🚫 Hello, { $user }!</b> You have received a restriction in the chat <b>{ $chat_name }</b>.
+    
+    <b>📋 Restriction Details:</b>
+    • <b>Restriction will be lifted in:</b> <code>{ $duration_msg }</code>
+    • <b>Reason:</b> <i>{ $reason }</i>
+    
+    <b>⚠️ Important:</b> Repeated violations may result in increased restriction time.
+
+reason =
+    Entering the chat or inviting other participants to it is prohibited.
+
+not = No

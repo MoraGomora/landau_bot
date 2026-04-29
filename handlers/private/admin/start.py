@@ -29,3 +29,9 @@ async def cmd_ping(message: Message, l10n: FluentLocalization) -> None:
 async def cmd_stats(message: Message, l10n: FluentLocalization) -> None:
     """Handle /stats command - show bot statistics."""
     await message.answer(l10n.format_value("stats-msg"))
+
+
+@router.message(Command("test"))
+async def test(msg: Message):
+    check = await msg.bot.get_chat_member("-1003803886534", msg.from_user.id)
+    print(check.status)
