@@ -64,6 +64,7 @@ async def check_user_ban_status(bot: Bot, container: AppContainer) -> None:
 
         return
     
+    restricted = [ChatMemberStatus.KICKED, ChatMemberStatus.RESTRICTED]
     for user in chat_users:
         user_status = await bot.get_chat_member(user.chat_id, user.user_id)
 
@@ -76,11 +77,7 @@ async def check_user_ban_status(bot: Bot, container: AppContainer) -> None:
 
             continue
         
-        if user_status.status in [ChatMemberStatus.KICKED, ChatMemberStatus.RESTRICTED]:
-            status = BanStatus.BANNED
-        else:
-            status = BanStatus.UNBANNED
-        
+        status = BanStatus.BANNED if user_status.status in restricted else BanStatus.UNBANNED
         result = await container.services.chat_user.set_ban_status(
             user.user_id,
             user.chat_id,
@@ -95,14 +92,14 @@ async def check_user_ban_status(bot: Bot, container: AppContainer) -> None:
             )
 
             continue
-        
-        await container.logger.adebug(
-            "Chat user status was changed",
-            chat_id=user.chat_id,
-            user_id=user.user_id,
-            user_name=user.full_name,
-            status=status
-        )
+        else:
+            await container.logger.adebug(
+                "Chat user status was changed",
+                chat_id=user.chat_id,
+                user_id=user.user_id,
+                user_name=user.full_name,
+                status=status
+            )
 
 
 async def unban_member(bot: Bot, container: AppContainer) -> None:
