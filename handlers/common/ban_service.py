@@ -120,7 +120,7 @@ class BanService:
                 member_id=member_id,
                 content_type=content_type
             )
-            return False, None
+            return False
         
         await self.container.logger.ainfo(
             "New data about user violation saved successfully. Starting ban...",
@@ -129,13 +129,13 @@ class BanService:
             content_type=content_type
         )
         
-        return True, until
+        return True
     
     async def _perform_ban(
         self,
         member_id: int,
         chat_id: int,
-        until: int,
+        duration: int,
         content_type: str
     ) -> bool:
         """Выполняет бан в Telegram."""
@@ -146,7 +146,8 @@ class BanService:
             return False
         
         try:
-            ban_until = datetime.fromtimestamp(until)
+            # ban_until = datetime.fromtimestamp(until)
+            ban_until = self._duration_to_time(duration)
             banned = await self.bot.ban_chat_member(
                 chat_id, member_id,
                 ban_until
@@ -160,7 +161,7 @@ class BanService:
                 content_type=content_type,
                 member=member_id,
                 error=str(e),
-                until_timestamp=until
+                until_timestamp=duration
             )
             return False
     
@@ -301,19 +302,18 @@ class BanService:
             duration = next_ban_duration(prev_duration)
 
             # 4. Сохраняем данные о нарушении
-            success, until = await self._save_violation_data(
+            success = await self._save_violation_data(
                 member_id, chat_id, duration, content_type
             )
 
-            if not success or not until:
+            if not success:
                 return
         else:
             duration = random.randint(30, 120)
-            until = self._duration_to_time(duration)
         
         # 5. Выполняем бан в Telegram
         if not await self._perform_ban(
-            member_id, chat_id, until, content_type
+            member_id, chat_id, duration, content_type
         ):
             # Обработка ошибки
             await self._set_status(member_id, chat_id, Status.FAILED, "failed")

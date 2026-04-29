@@ -111,7 +111,7 @@ class ChatUserService:
     
     async def get_users_with_uncomplete_status(self) -> List[ChatUser] | None:
         docs = await self.repo.get_many(
-            {"status": {"$in": [Status.PENDING, Status.FAILED]}}
+            {"status": {"$in": [Status.PENDING, Status.FAILED, Status.PROCESSING]}}
         )
 
         if not docs:

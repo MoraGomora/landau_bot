@@ -92,14 +92,6 @@ async def check_user_ban_status(bot: Bot, container: AppContainer) -> None:
             )
 
             continue
-        else:
-            await container.logger.adebug(
-                "Chat user status was changed",
-                chat_id=user.chat_id,
-                user_id=user.user_id,
-                user_name=user.full_name,
-                status=status
-            )
 
 
 async def unban_member(bot: Bot, container: AppContainer) -> None:

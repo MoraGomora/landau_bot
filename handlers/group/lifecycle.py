@@ -93,7 +93,6 @@ async def new_members(msg: Message, container: AppContainer) -> None:
 
 @router.message(F.content_type == ContentType.LEFT_CHAT_MEMBER)
 async def new_members(msg: Message, container: AppContainer) -> None:
-    print(msg.chat.type)
     me = await msg.bot.get_me()
     if msg.left_chat_member.id == me.id:
         return
