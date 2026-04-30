@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 
 from aiogram import Router
-from aiogram.types import ChatMemberUpdated
+from aiogram.types import ChatMemberUpdated, ChatMemberRestricted, ChatMemberBanned
 from aiogram.enums import ChatMemberStatus
 from aiogram.filters.chat_member_updated import ChatMemberUpdatedFilter, RESTRICTED, KICKED
 

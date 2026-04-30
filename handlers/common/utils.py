@@ -4,10 +4,10 @@ from datetime import date
 def next_ban_duration(
     prev_duration: int | None,
     *,
-    base: int = 30,
+    base: int = 35,
     multiplier: float = 1.5,
     step: int = 0,
-    max_duration: int | None = 3600
+    max_duration: int | None = 86400
 ) -> int:
     """
     Вычисляет следующую длительность бана.

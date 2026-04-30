@@ -1,6 +1,5 @@
 import time
 import random
-from datetime import datetime
 
 from aiogram import Bot
 from aiogram.exceptions import TelegramBadRequest
@@ -146,15 +145,25 @@ class BanService:
             return False
         
         try:
-            # ban_until = datetime.fromtimestamp(until)
             ban_until = self._duration_to_time(duration)
+
+            await self.container.logger.ainfo(
+                "Attempting to ban member in Telegram",
+                chat_id=chat_id,
+                member_id=member_id,
+                content_type=content_type,
+                current_time=int(time.time()),
+                until_timestamp=ban_until,
+                difference=ban_until - int(time.time())
+            )
+
             banned = await self.bot.ban_chat_member(
                 chat_id, member_id,
                 ban_until
             )
-            return bool(banned)
-        
-        except (TelegramBadRequest, ValueError, OSError, OverflowError) as e:
+
+            return banned
+        except (TelegramBadRequest, Exception) as e:
             await self.container.logger.aerror(
                 "Failed to ban member",
                 chat_id=chat_id,
@@ -277,7 +286,6 @@ class BanService:
     ) -> None:
         """Основной метод банирования пользователя."""
         
-        # 1. Проверяем/создаём пользователя
         await self.container.logger.adebug(
             "Getting info about user from Redis",
             chat_id=chat_id,
@@ -290,7 +298,6 @@ class BanService:
         ):
             return
         
-        # 2. Устанавливаем статус PENDING
         if not await self._set_status(
             member_id, chat_id, Status.PENDING, "restrict"
         ):
@@ -309,7 +316,7 @@ class BanService:
             if not success:
                 return
         else:
-            duration = random.randint(30, 120)
+            duration = random.randint(35, 120)
         
         # 5. Выполняем бан в Telegram
         if not await self._perform_ban(
