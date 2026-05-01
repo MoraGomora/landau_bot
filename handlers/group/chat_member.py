@@ -111,7 +111,7 @@ async def send_msg(
         duration: int,
         reason: str
 ) -> None:
-    if not await container.services.user.get_has_privtae(update.new_chat_member.user.id):
+    if not await container.services.user.get_has_private(update.new_chat_member.user.id):
         await container.logger.awarning(
             "Message can't be send in private messages because the user doesn't have an active private message",
             user_id=update.new_chat_member.user.id
@@ -132,7 +132,20 @@ async def send_msg(
     )
 
     if not result:
+        await container.logger.aerror(
+            "Failed to send message to user about restriction",
+            user_id=update.new_chat_member.user.id
+        )
+
         return
+    
+    await container.logger.ainfo(
+        "Message about restriction was sent to user successfully",
+        user_id=update.new_chat_member.user.id,
+        chat_id=update.chat.id,
+        duration=duration,
+        reason=reason
+    )
 
 
 @router.chat_member(ChatMemberUpdatedFilter(RESTRICTED | KICKED))

@@ -80,7 +80,6 @@ class SettingsService:
             owner_id=doc.owner_id,
             has_send_violation_msg=doc.has_send_violation_msg,
             has_dynamic_violation_time=doc.has_dynamic_violation_time,
-            static_violation_time=doc.static_violation_time,
             has_chat_dialog=doc.has_chat_dialog
         )
 

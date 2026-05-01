@@ -73,7 +73,7 @@ class ChatUserService:
         })
 
         if not doc:
-            await self.logger.aerror(
+            await self.logger.adebug(
                 "Chat user record was not found. Returning None...",
                 user_id=user_id,
                 chat_id=chat_id
@@ -180,6 +180,10 @@ class ChatUserService:
         docs = await self.repo.get_many({})
 
         if not docs:
+            await self.logger.adebug(
+                "Chat users was not found"
+            )
+            
             return
         
         return docs
@@ -207,6 +211,13 @@ class ChatUserService:
             )
 
             return Violation.model_validate_json(raw)
+        
+        await self.logger.adebug(
+            "Data with entered key was not found. Returning None...",
+            user_id=user_id,
+            chat_id=chat_id,
+            time=time
+        )
         
         return None
     
