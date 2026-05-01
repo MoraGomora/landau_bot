@@ -1,4 +1,3 @@
-import base64
 from enum import StrEnum, auto
 from functools import lru_cache
 from os import environ
