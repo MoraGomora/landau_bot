@@ -237,7 +237,7 @@ class BanService:
             "Join attempt counted successfully after ban",
             chat_id=chat_id,
             member_id=member_id,
-            total_attempts=attempt
+            total_attempts=attempt.join_attempts
         )
         
         # Устанавливаем статус DONE
