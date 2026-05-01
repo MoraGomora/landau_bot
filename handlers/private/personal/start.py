@@ -64,6 +64,12 @@ async def main_settings(
                     "chats-not-found"
                 )
             )
+
+            await container.logger.awarning(
+                "No user chats found for settings",
+                user_id=call.from_user.id
+            )
+
             await call.answer()
             
             return
@@ -92,4 +98,9 @@ async def main_settings(
         
         await call.answer()
     elif callback_data.action == "support":
+        await container.logger.ainfo(
+            "User requested support",
+            user_id=call.from_user.id
+        )
+        
         await call.answer("This function in development")

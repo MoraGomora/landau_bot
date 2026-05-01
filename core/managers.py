@@ -41,7 +41,7 @@ class SimpleWorkerManager:
             exc = task.exception()
             if exc:
                 self._logger.error(
-                    event="Worker crashed",
+                    event="Worker crashed with an exception",
                     worker=name,
                     error=str(exc)
                 )
@@ -117,9 +117,19 @@ class SimpleTaskManager:
                     error=str(e)
                 )
             finally:
+                self.logger.debug(
+                    "Task completed. Removing from manager...",
+                    task=name
+                )
+
                 self._tasks.pop(name, None)
 
         if name in self._tasks:
+            self.logger.debug(
+                "Task with this name is already sheduled. Cancelling previous task...",
+                name=name
+            )
+            
             self._tasks.get(name).cancel()
         
         self._tasks[name] = asyncio.create_task(_run(), name=name)

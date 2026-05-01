@@ -26,7 +26,7 @@ async def choose_chat_handler(
     user_id = call.from_user.id
     chat_id = callback_data.chat_id
     
-    await container.logger.adebug(
+    await container.logger.ainfo(
         "User selected chat for settings",
         user_id=user_id,
         chat_id=chat_id
@@ -34,7 +34,7 @@ async def choose_chat_handler(
     
     try:
         await call.message.delete()
-        await container.logger.adebug(
+        await container.logger.ainfo(
             "Settings message deleted",
             user_id=user_id,
             chat_id=chat_id
@@ -58,7 +58,7 @@ async def choose_chat_handler(
         await call.answer()
         return
     
-    await container.logger.adebug(
+    await container.logger.ainfo(
         "Chat settings retrieved",
         user_id=user_id,
         chat_id=chat_id,

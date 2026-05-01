@@ -18,7 +18,7 @@ async def new_members(msg: Message, container: AppContainer) -> None:
         deleted = await msg.delete()
         if deleted:
             await container.logger.ainfo(
-                "Service message deleted successfully",
+                "Service message deleted successfully after new members joined",
                 chat_id=msg.chat.id,
                 content_type=msg.content_type
             )
@@ -95,18 +95,23 @@ async def new_members(msg: Message, container: AppContainer) -> None:
 async def new_members(msg: Message, container: AppContainer) -> None:
     me = await msg.bot.get_me()
     if msg.left_chat_member.id == me.id:
+        await container.logger.ainfo(
+            "Bot was kicked or leave from chat",
+            chat_id=msg.chat.id
+        )
+
         return
     
     try:
         deleted = await msg.delete()
         if deleted:
             await container.logger.ainfo(
-                "Service message deleted successfully",
+                "Service message deleted successfully after user left the chat",
                 chat_id=msg.chat.id,
                 content_type=msg.content_type
             )
     except TelegramBadRequest as e:
-        await container.logger.ainfo(
+        await container.logger.aerror(
             "Failed to delete service message",
             chat_id=msg.chat.id,
             content_type=msg.content_type,
@@ -121,12 +126,12 @@ async def chat_title_changed(msg: Message, container: AppContainer) -> None:
         deleted = await msg.delete()
         if deleted:
             await container.logger.ainfo(
-                "Service message deleted successfully",
+                "Service message deleted successfully after chat title changed",
                 chat_id=msg.chat.id,
                 content_type=msg.content_type
             )
     except TelegramBadRequest as e:
-        await container.logger.ainfo(
+        await container.logger.aerror(
             "Failed to delete service message",
             chat_id=msg.chat.id,
             content_type=msg.content_type,
@@ -135,10 +140,27 @@ async def chat_title_changed(msg: Message, container: AppContainer) -> None:
         return
     
     if not await container.services.settings.get(msg.chat.id):
+        await container.logger.awarning(
+            "Settings for this chat not found. Can't update chat title",
+            chat_id=msg.chat.id
+        )
+
         return
     
     result = await container.services.settings.change_chat_title(
         msg.chat.id, msg.chat.title
     )
     if not result:
+        await container.logger.aerror(
+            "Failed to update chat title in settings",
+            chat_id=msg.chat.id,
+            new_title=msg.chat.title
+        )
+
         return
+    
+    await container.logger.ainfo(
+        "Chat title updated successfully in settings",
+        chat_id=msg.chat.id,
+        new_title=msg.chat.title
+    )

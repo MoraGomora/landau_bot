@@ -26,6 +26,13 @@ class BanService:
     ) -> bool:
         """Проверяет наличие пользователя, создаёт если нужно."""
         if await self.container.services.chat_user.is_available(member_id, chat_id):
+            await self.container.logger.adebug(
+                "Chat user record already exists in the database. Retrieving info from Redis",
+                chat_id=chat_id,
+                member_id=member_id,
+                content_type=content_type
+            )
+
             return True
         
         created = await self.container.services.chat_user.create(
@@ -42,6 +49,13 @@ class BanService:
                 content_type=content_type
             )
             return False
+        
+        await self.container.logger.adebug(
+            "Chat user record created successfully",
+            chat_id=chat_id,
+            member_id=member_id,
+            content_type=content_type
+        )
         
         return True
     
@@ -87,7 +101,21 @@ class BanService:
                 today()
             )
             if data:
+                await self.container.logger.adebug(
+                    "Previous violation data retrieved successfully",
+                    chat_id=chat_id,
+                    member_id=member_id,
+                    duration=data.duration,
+                    until=data.until
+                )
+
                 return data.duration
+            
+            await self.container.logger.aerror(
+                "Failed to retrieve previous violation data",
+                chat_id=chat_id,
+                member_id=member_id
+            )
         
         return None
     
@@ -193,11 +221,24 @@ class BanService:
             member_id, chat_id
         )
         if not attempt:
+            await self.container.logger.aerror(
+                "Failed to count join attempt for user after ban",
+                chat_id=chat_id,
+                member_id=member_id
+            )
+
             await self.bot.send_message(
                 chat_id,
                 self.container.translator.call("cannot-count-join-attempt")
             )
             return False
+        
+        await self.container.logger.ainfo(
+            "Join attempt counted successfully after ban",
+            chat_id=chat_id,
+            member_id=member_id,
+            total_attempts=attempt
+        )
         
         # Устанавливаем статус DONE
         done = await self._set_status(member_id, chat_id, Status.DONE, "done")
@@ -222,13 +263,18 @@ class BanService:
         if not await self.container.services.settings.get_has_send_violation_msg(
             chat_id
         ):
+            await self.container.logger.adebug(
+                "Sending violation message is disabled in settings. Skipping sending message...",
+                chat_id=chat_id
+            )
+
             return
         
         user = self.container.translator.mention(member_id, member_name)
         duration_msg = self.container.translator.duration(duration)
         
         await self.container.logger.ainfo(
-            "Member banned successfully. Counting join attempts...",
+            "Sending violation message to the chat...",
             chat_id=chat_id,
             member=member_id
         )
@@ -243,6 +289,13 @@ class BanService:
         )
         
         if msg:
+            await self.container.logger.adebug(
+                "Violation message sent successfully. Shedule deleting message task...",
+                chat_id=chat_id,
+                member_id=member_id,
+                message_id=msg.message_id
+            )
+
             self.container.memory.set(chat_id, msg.message_id)
 
     async def _delete_message_task(
@@ -250,7 +303,9 @@ class BanService:
             chat_id: int,
             member_id: int
     ) -> bool:
-        if not self.container.memory.get(chat_id):
+        id = self.container.memory.get(chat_id)
+
+        if not id:
             await self.container.logger.aerror(
                 "Message ID was not found on memory. Maybe, the violation message was not sent",
                 chat_id=chat_id,
@@ -258,13 +313,18 @@ class BanService:
             )
             return False
         
-        ids = self.container.memory.get(chat_id)
+        await self.container.logger.adebug(
+            "Scheduling task to delete violation message after ban",
+            chat_id=chat_id,
+            member_id=member_id,
+            message_id=id
+        )
 
         self.container.task_manager.shedule(
             f"delete_msg:{chat_id}:{member_id}",
             lambda: self.bot.delete_message(
                 chat_id,
-                ids
+                id
             ),
             30
         )
@@ -305,6 +365,13 @@ class BanService:
         
         # 3. Получаем предыдущую длительность и рассчитываем новую (если настройка "Динамическое время бана" включена)
         if await self.container.services.settings.get_has_send_dynamic_violation_time(chat_id):
+            await self.container.logger.adebug(
+                "Dynamic violation time is enabled. Calculating new ban duration based on previous violation data...",
+                chat_id=chat_id,
+                member_id=member_id,
+                content_type=content_type
+            )
+            
             prev_duration = await self._get_previous_duration(member_id, chat_id)
             duration = next_ban_duration(prev_duration)
 
@@ -314,8 +381,23 @@ class BanService:
             )
 
             if not success:
+                await self._set_status(member_id, chat_id, Status.FAILED, "failed")
+                await self.container.logger.aerror(
+                    "Failed to save violation data. Aborting ban...",
+                    chat_id=chat_id,
+                    member_id=member_id,
+                    content_type=content_type
+                )
+
                 return
         else:
+            await self.container.logger.adebug(
+                "Dynamic violation time is disabled. Randomly generating ban duration...",
+                chat_id=chat_id,
+                member_id=member_id,
+                content_type=content_type
+            )
+
             duration = random.randint(35, 120)
         
         # 5. Выполняем бан в Telegram
@@ -323,6 +405,13 @@ class BanService:
             member_id, chat_id, duration, content_type
         ):
             # Обработка ошибки
+            await self.container.logger.aerror(
+                "Failed to ban member in Telegram",
+                chat_id=chat_id,
+                member_id=member_id,
+                content_type=content_type
+            )
+
             await self._set_status(member_id, chat_id, Status.FAILED, "failed")
             await self.bot.send_message(
                 chat_id,
@@ -339,6 +428,34 @@ class BanService:
             result = await self._delete_message_task(chat_id, member_id)
 
             if not result:
+                await self.container.logger.aerror(
+                    "Failed to schedule violation message deleting task",
+                    chat_id=chat_id,
+                    member_id=member_id
+                )
+
                 return
             
+            await self.container.logger.ainfo(
+                "Ban process completed successfully",
+                chat_id=chat_id,
+                member_id=member_id,
+                duration=duration
+            )
+
             self.container.memory.delete(chat_id)
+        else:
+            await self.container.logger.aerror(
+                "Failed to finalize ban process",
+                chat_id=chat_id,
+                member_id=member_id
+            )
+
+            await self._set_status(member_id, chat_id, Status.FAILED, "failed")
+            await self.bot.send_message(
+                chat_id,
+                self.container.translator.call(
+                    "failed-to-ban",
+                    e="Failed to finalize ban process"
+                )
+            )

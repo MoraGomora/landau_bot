@@ -81,7 +81,7 @@ class ChatUserService:
 
             return
         
-        await self.logger.ainfo(
+        await self.logger.adebug(
             "Chat user record was found",
             user_id=doc.user_id,
             chat_id=doc.chat_id,
@@ -135,7 +135,7 @@ class ChatUserService:
         )
 
         if not result:
-            await self.logger.ainfo(
+            await self.logger.adebug(
                 "Failed to update chat user status",
                 user_id=user_id,
                 chat_id=chat_id
@@ -143,7 +143,7 @@ class ChatUserService:
 
             return
         
-        await self.logger.ainfo(
+        await self.logger.adebug(
             "Status for chat user was updated successfully",
             user_id=result.user_id,
             chat_id=result.chat_id,

@@ -44,7 +44,7 @@ async def _set_status(
 async def _check_status(update: ChatMemberUpdated, container: AppContainer) -> None:
     restricted = [ChatMemberStatus.RESTRICTED, ChatMemberStatus.KICKED]
 
-    user_id = update.new_chat_member.from_user.id
+    user_id = update.new_chat_member.user.id
     chat_id = update.chat.id
 
     user = await update.bot.get_chat_member(
@@ -53,6 +53,29 @@ async def _check_status(update: ChatMemberUpdated, container: AppContainer) -> N
     )
 
     if not user:
+        return
+    
+    if user.status not in restricted:
+        await container.logger.ainfo(
+            "User was unbanned before the task was executed",
+            user_id=user_id,
+            chat_id=chat_id
+        )
+
+        return
+    
+    result = await update.bot.unban_chat_member(
+        chat_id,
+        user_id
+    )
+
+    if not result:
+        await container.logger.aerror(
+            "Failed to unban user",
+            user_id=user_id,
+            chat_id=chat_id
+        )
+
         return
     
     status = BanStatus.UNBANNED if user.status not in restricted else BanStatus.BANNED

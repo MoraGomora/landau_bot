@@ -45,6 +45,11 @@ async def bot_join(
     )
 
     if await container.services.settings.is_available(update.chat.id):
+        await container.logger.ainfo(
+            "Settings for this chat is already available. Updating \"has_chat_dialog\" value to True",
+            chat_id=update.chat.id
+        )
+
         await update_dialog(True, update, container)
         return
 
@@ -63,6 +68,13 @@ async def bot_join(
                 )
             )
             return
+        
+        await container.logger.ainfo(
+            "Chat owner retrieved successfully",
+            chat_id=update.chat.id,
+            owner_id=owner.user.id,
+            owner_name=owner.user.full_name
+        )
 
         result = await container.services.settings.create(
             chat_id=update.chat.id,
@@ -97,7 +109,7 @@ async def bot_leave(
     update: ChatMemberUpdated, container: AppContainer
 ) -> None:
     await container.logger.ainfo(
-        "Bot was kicked or leave from chat",
+        "Bot was kicked or leave from chat. Updating \"has_chat_dialog\" value to False",
         chat_id=update.chat.id
     )
 

@@ -24,9 +24,7 @@ class UserService:
             has_private: bool = False,
             permission: Permission = Permission.USER
     ) -> User | None:
-        doc = await self.repo.get_one({
-            "user_id": user_id
-        })
+        doc = await self.get(user_id)
 
         if doc:
             await self.logger.adebug(
@@ -36,6 +34,13 @@ class UserService:
                 permission=doc.permission
             )
             return
+        
+        await self.logger.adebug(
+            "User record was not found. Creating a new one...",
+            user_id=user_id,
+            has_private=has_private,
+            permission=permission
+        )
         
         data = CreateUser(
             user_id=user_id,
@@ -53,9 +58,9 @@ class UserService:
         
         await self.logger.adebug(
             "User record created successfully",
-            user_id=user_id,
-            has_private=has_private,
-            permission=permission
+            user_id=result.user_id,
+            has_private=result.has_private,
+            permission=result.permission
         )
 
         return result
@@ -77,6 +82,13 @@ class UserService:
             )
             return
         
+        await self.logger.adebug(
+            "User record was found",
+            user_id=doc.user_id,
+            has_private=doc.has_private,
+            permission=doc.permission
+        )
+        
         return doc
     
     async def change_has_private(self, user_id: int, status: bool) -> User | None:
@@ -90,12 +102,24 @@ class UserService:
             {"has_private": status}
         )
     
-    async def get_has_privtae(self, user_id: int) -> bool:
+    async def get_has_private(self, user_id: int) -> bool:
         doc = await self.get(user_id)
 
         if not doc:
+            await self.logger.adebug(
+                "User record was not found. Returning None...",
+                user_id=user_id
+            )
+
             return
         
+        await self.logger.adebug(
+            "User record was found. Returning has_private value...",
+            user_id=doc.user_id,
+            has_private=doc.has_private,
+            permission=doc.permission
+        )
+
         return doc.has_private
 
     async def is_available(self, user_id: int) -> bool:

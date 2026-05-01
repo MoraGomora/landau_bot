@@ -158,11 +158,20 @@ async def back(
     user_id = call.from_user.id
     
     try:
-        # Удаляем текущее сообщение
         try:
-            await call.message.delete()
+            deleted = await call.message.delete()
+            if not deleted:
+                await container.logger.awarning(
+                    "Failed to delete message",
+                    user_id=user_id,
+                    message_id=call.message.message_id
+                )
         except TelegramBadRequest:
-            pass
+            await container.logger.awarning(
+                "Message was already deleted or can't be deleted",
+                user_id=user_id,
+                message_id=call.message.message_id
+            )
         
         await call.answer()
         
@@ -180,17 +189,33 @@ async def back(
         if previous_state == NavigationState.MAIN_MENU:
             await state.clear()
             await _show_main_menu(call, container)
+            await container.logger.adebug(
+                "Main menu shown",
+                user_id=user_id
+            )
             
         elif previous_state == NavigationState.CHAT_SETTINGS:
             await _show_chat_settings_menu(call, state, container)
+            await container.logger.adebug(
+                "Chat settings menu shown",
+                user_id=user_id
+            )
             
         elif previous_state == NavigationState.CHAT_CONFIRM_SETTINGS:
             await _show_settings_menu(call, state, container)
+            await container.logger.adebug(
+                "Settings menu shown",
+                user_id=user_id
+            )
             
         else:
             # По умолчанию показываем главное меню
             await state.clear()
             await _show_main_menu(call, container)
+            await container.logger.adebug(
+                "Previous state not found, main menu shown by default",
+                user_id=user_id
+            )
         
         await container.logger.ainfo(
             "Back button handled successfully",

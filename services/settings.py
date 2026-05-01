@@ -1,5 +1,6 @@
 from structlog.typing import FilteringBoundLogger
 
+from enums import status
 from repositories import Repositories, SettingsRepository
 from models import Settings, CreateSettings
 
@@ -61,15 +62,41 @@ class SettingsService:
         Returs:
             `Settings` when record is available
             `None` when record is not available (logically)"""
-        return await self.repo.get_one({
+        doc = await self.repo.get_one({
             "chat_id": chat_id
         })
+
+        if not doc:
+            await self.logger.adebug(
+                "Record is not available on the database",
+                chat_id=chat_id
+            )
+            return
+        
+        await self.logger.adebug(
+            "Record is available on the database",
+            chat_id=doc.chat_id,
+            chat_name=doc.chat_name,
+            owner_id=doc.owner_id,
+            has_send_violation_msg=doc.has_send_violation_msg,
+            has_dynamic_violation_time=doc.has_dynamic_violation_time,
+            static_violation_time=doc.static_violation_time,
+            has_chat_dialog=doc.has_chat_dialog
+        )
+
+        return doc
     
     async def get_has_send_violation_msg(self, chat_id: int) -> bool | None:
         doc = await self.get(chat_id)
 
         if not doc:
             return
+        
+        await self.logger.adebug(
+            "Returning a value of \"has_send_violation_msg\" key from settings record",
+            chat_id=doc.chat_id,
+            has_send_violation_msg=doc.has_send_violation_msg
+        )
         
         return doc.has_send_violation_msg
     
@@ -78,6 +105,12 @@ class SettingsService:
 
         if not doc:
             return
+        
+        await self.logger.adebug(
+            "Returning a value of \"has_dynamic_violation_time\" key from settings record",
+            chat_id=doc.chat_id,
+            has_dynamic_violation_time=doc.has_dynamic_violation_time
+        )
         
         return doc.has_dynamic_violation_time
 
@@ -90,9 +123,6 @@ class SettingsService:
         doc = await self.get(chat_id)
 
         if not doc:
-            await self.logger.adebug(
-                "Record is available on the database"
-            )
             return
 
         return await self.repo.update(
@@ -109,26 +139,55 @@ class SettingsService:
         doc = await self.get(chat_id)
 
         if not doc:
-            await self.logger.adebug(
-                "Record is available on the database"
-            )
             return
 
-        return await self.repo.update(
+        result = await self.repo.update(
             {"chat_id": chat_id},
             {"has_chat_dialog": status}
         )
+
+        if not result:
+            await self.logger.adebug(
+                "Failed to update \"has_chat_dialog\" key on settings record",
+                chat_id=chat_id,
+                has_chat_dialog=status
+            )
+            return
+        
+        await self.logger.adebug(
+            "Settings \"has_chat_dialog\" key was updated successfully",
+            chat_id=result.chat_id,
+            has_chat_dialog=result.has_chat_dialog
+        )
+
+        return result
     
     async def change_chat_title(self, chat_id: int, new_title: str) -> Settings | None:
         doc = await self.get(chat_id)
 
         if not doc:
             return
-
-        return await self.repo.update(
+        
+        result = await self.repo.update(
             {"chat_id": chat_id},
             {"chat_name": new_title}
         )
+
+        if not result:
+            await self.logger.adebug(
+                "Failed to update \"chat_name\" key on settings record",
+                chat_id=chat_id,
+                chat_name=new_title
+            )
+            return
+
+        await self.logger.adebug(
+            "Settings \"chat_name\" key was updated successfully",
+            chat_id=result.chat_id,
+            chat_name=result.chat_name
+        )
+
+        return result
     
     async def change_has_dynamic_violation(self, chat_id: int, status: bool) -> Settings | None:
         doc = await self.get(chat_id)
@@ -136,10 +195,26 @@ class SettingsService:
         if not doc:
             return
 
-        return await self.repo.update(
+        result = await self.repo.update(
             {"chat_id": chat_id},
             {"has_dynamic_violation_time": status}
         )
+
+        if not result:
+            await self.logger.adebug(
+                "Failed to update \"has_dynamic_violation_time\" key on settings record",
+                chat_id=chat_id,
+                has_dynamic_violation_time=status
+            )
+            return
+        
+        await self.logger.adebug(
+            "Settings \"has_dynamic_violation_time\" key was updated successfully",
+            chat_id=result.chat_id,
+            has_dynamic_violation_time=result.has_dynamic_violation_time
+        )
+
+        return result
     
     async def change_static_violation_time(self, chat_id: int, delay: int | None) -> Settings | None:
         doc = await self.get(chat_id)
@@ -147,10 +222,26 @@ class SettingsService:
         if not doc:
             return
         
-        return await self.repo.update(
+        result = await self.repo.update(
             {"chat_id": chat_id},
             {"static_violation_time": delay}
         )
+
+        if not result:
+            await self.logger.adebug(
+                "Failed to update \"static_violation_time\" key on settings record",
+                chat_id=chat_id,
+                static_violation_time=delay
+            )
+            return
+
+        await self.logger.adebug(
+            "Settings \"static_violation_time\" key was updated successfully",
+            chat_id=result.chat_id,
+            static_violation_time=result.static_violation_time
+        )
+
+        return result
     
     async def is_available(self, chat_id: int) -> bool:
         doc = await self.get(chat_id=chat_id)
@@ -163,6 +254,17 @@ class SettingsService:
         )
 
         if not docs:
+            await self.logger.adebug(
+                "No records were found for the specified owner_id",
+                owner_id=owner_id
+            )
+
             return
+        
+        await self.logger.adebug(
+            "Records were found for the specified owner_id",
+            owner_id=owner_id,
+            chats_count=len(docs)
+        )
         
         return docs
