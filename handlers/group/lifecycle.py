@@ -13,7 +13,7 @@ router = Router(name="lifecycle")
 
 
 @router.message(F.content_type == ContentType.NEW_CHAT_MEMBERS)
-async def new_members(msg: Message, container: AppContainer) -> None:
+async def new_chat_members(msg: Message, container: AppContainer) -> None:
     try:
         deleted = await msg.delete()
         if deleted:
@@ -39,8 +39,6 @@ async def new_members(msg: Message, container: AppContainer) -> None:
             owner_name=msg.from_user.full_name,
             chat_id=msg.chat.id
         )
-
-        return
     
     me = await msg.bot.get_me()
 
@@ -92,7 +90,7 @@ async def new_members(msg: Message, container: AppContainer) -> None:
     
 
 @router.message(F.content_type == ContentType.LEFT_CHAT_MEMBER)
-async def new_members(msg: Message, container: AppContainer) -> None:
+async def left_chat_member(msg: Message, container: AppContainer) -> None:
     me = await msg.bot.get_me()
     if msg.left_chat_member.id == me.id:
         await container.logger.ainfo(
