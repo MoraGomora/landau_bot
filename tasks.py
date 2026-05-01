@@ -136,7 +136,7 @@ async def unban_member(bot: Bot, container: AppContainer) -> None:
         )
 
         if not user_violation:
-            await container.logger.aerror(
+            await container.logger.adebug(
                 "User violation was not found",
                 user_id=user.user_id,
                 chat_id=user.chat_id

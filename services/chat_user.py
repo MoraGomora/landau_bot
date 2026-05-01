@@ -115,7 +115,7 @@ class ChatUserService:
         )
 
         if not docs:
-            await self.logger.aerror(
+            await self.logger.adebug(
                 "Users with uncompleted status was not found"
             )
             
