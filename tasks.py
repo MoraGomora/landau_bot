@@ -24,11 +24,12 @@ async def check_users_status(bot: Bot, container: AppContainer) -> None:
 
 
 async def test_db(owners: list, bot: Bot, container: AppContainer) -> None:
-    is_connected = await container.repositories.ping()
+    is_connected, error_message = await container.repositories.ping()
     if not is_connected:
         await container.logger.aerror(
             "Failed to connect to MongoDB",
-            status=is_connected
+            status=is_connected,
+            error=error_message
         )
 
         for owner in owners:
@@ -39,15 +40,20 @@ async def test_db(owners: list, bot: Bot, container: AppContainer) -> None:
 
             result = await bot.send_message(
                 owner,
-                "Failed to connect to MongoDB. Check internet connection or add new IP address in MongoDB -> Network config"
+                "Failed to connect to MongoDB server. Bot catch exception when trying to ping:\n\n" + error_message
             )
             if result:
                 await container.logger.adebug(
                     "The message sent to owner successfully",
                     owner_id=owner
                 )
+            else:
+                await container.logger.aerror(
+                    "Failed to send message to owner about MongoDB connection problem",
+                    owner_id=owner
+                )
 
-        return
+        exit(1)
     
     await container.logger.adebug(
         "MongoDB is alive",
@@ -76,6 +82,14 @@ async def check_user_ban_status(bot: Bot, container: AppContainer) -> None:
             )
 
             continue
+
+        await container.logger.adebug(
+            "Got user status from Telegram. Checking if it is correct with the database record...",
+            user_id=user.user_id,
+            chat_id=user.chat_id,
+            telegram_status=user_status.status,
+            db_status=user.status
+        )
         
         status = BanStatus.BANNED if user_status.status in restricted else BanStatus.UNBANNED
         result = await container.services.chat_user.set_ban_status(
@@ -93,6 +107,13 @@ async def check_user_ban_status(bot: Bot, container: AppContainer) -> None:
 
             continue
 
+        await container.logger.adebug(
+            "Ban status for user was set successfully",
+            user_id=user.user_id,
+            chat_id=user.chat_id,
+            status=result.status
+        )
+
 
 async def unban_member(bot: Bot, container: AppContainer) -> None:
     chat_users = await container.services.chat_user.get_all()
@@ -103,6 +124,11 @@ async def unban_member(bot: Bot, container: AppContainer) -> None:
         )
 
         return
+    
+    await container.logger.adebug(
+        "Got all chat users. Starting to check each user for unbanning...",
+        users_count=len(chat_users)
+    )
     
     for user in chat_users:
         user_violation = await container.services.chat_user.get_violation_data(
@@ -126,6 +152,12 @@ async def unban_member(bot: Bot, container: AppContainer) -> None:
             )
 
             continue
+
+        await container.logger.adebug(
+            "User violation time is expired. Trying to unban the user...",
+            user_id=user.user_id,
+            chat_id=user.chat_id
+        )
         
         result = await bot.unban_chat_member(
             user.chat_id, user.user_id
@@ -152,4 +184,9 @@ async def unban_member(bot: Bot, container: AppContainer) -> None:
             )
 
             continue
-            
+        
+        await container.logger.adebug(
+            "User was unbanned successfully",
+            user_id=user.user_id,
+            chat_id=user.chat_id
+        )

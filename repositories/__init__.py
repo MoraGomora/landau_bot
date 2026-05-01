@@ -23,25 +23,30 @@ class Repositories:
         self._client = client
         self._logger = logger
 
-    async def ping(self) -> bool:
+    async def ping(self) -> tuple[bool, str | None]:
+        """Check connection to MongoDB server.
+        
+        Returns a tuple where the first element is a boolean indicating success,
+        and the second element is an error message if the connection failed.
+        """
         try:
             data = await self._client.admin.command("ping")
 
-            return bool(data)
+            return bool(data), None
         except OperationFailure as e:
             await self._logger.aerror(
                 "OperationFailure exception when trying to ping",
                 error=str(e)
             )
 
-            exit(1)
+            return False, str(e)
         except PyMongoError as e:
             await self._logger.aerror(
                 "PyMongoError",
                 error=str(e)
             )
 
-            return False
+            return False, str(e)
 
 
 __all__ = [
