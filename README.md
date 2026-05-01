@@ -281,26 +281,80 @@ python bot.py
 
 ### 1. Требования
 - Docker и Docker Compose установлены
-- Файл `.env` с переменными окружения
 
 ### 2. Подготовка
 
-#### 2.1 Создайте файл `.env`
+> ℹ️ **РЕКОМЕНДАЦИЯ:** Храните все переменные окружения в файле `.env`, а не редактируйте `docker-compose.yml` напрямую. Это проще, безопаснее (не загружаете чувствительные данные в Git) и удобнее для изменения конфигурации.
+
+#### 2.1 Создайте файл `.env` из примера
+
+Переименуйте или скопируйте `.env.example` в `.env`:
+
 ```bash
-cp .env.example .env  # Или создайте вручную
+# Способ 1: переименование
+mv .env.example .env
+
+# Способ 2: копирование
+cp .env.example .env
 ```
 
 #### 2.2 Заполните `.env`
-```
+
+Отредактируйте файл `.env` и заполните значения:
+
+```bash
+# Telegram Bot
 BOT_TOKEN=YOUR_BOT_TOKEN_HERE
-BOT_OWNERS=123456789
+BOT_OWNERS=123456789,987654321
+
+# MongoDB
 MONGODB_USERNAME=your_username
 MONGODB_PASSWORD=your_password
 MONGODB_CLUSTER_URL=your_cluster.mongodb.net
 MONGODB_APP_NAME=landau
+
+# Логирование
+LOGS_SHOW_DEBUG_LOGS=true
+LOGS_RENDERER=console
+
+# Локализация
+LOCALIZATION_DEFAULT_LOCALE=en
+
+# Rate limiting
+THROTTLING_ENABLED=true
+THROTTLING_RATE_LIMIT=1
+
+# Redis
 REDIS_PASSWORD=your_secure_redis_password
+
+# Временная зона
 TZ=UTC
 ```
+
+#### 2.3 `docker-compose.yml` автоматически загружает `.env`
+
+В `docker-compose.yml` используется синтаксис `${VARIABLE_NAME}` для ссылки на переменные из `.env`:
+
+```yaml
+services:
+  bot:
+    environment:
+      BOT_TOKEN: ${BOT_TOKEN}
+      BOT_OWNERS: ${BOT_OWNERS}
+      MONGODB_USERNAME: ${MONGODB_USERNAME}
+      MONGODB_PASSWORD: ${MONGODB_PASSWORD}
+      MONGODB_CLUSTER_URL: ${MONGODB_CLUSTER_URL}
+      MONGODB_APP_NAME: ${MONGODB_APP_NAME}
+      LOGS_SHOW_DEBUG_LOGS: ${LOGS_SHOW_DEBUG_LOGS}
+      LOGS_RENDERER: ${LOGS_RENDERER}
+      LOCALIZATION_DEFAULT_LOCALE: ${LOCALIZATION_DEFAULT_LOCALE}
+      THROTTLING_ENABLED: ${THROTTLING_ENABLED}
+      THROTTLING_RATE_LIMIT: ${THROTTLING_RATE_LIMIT}
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+      TZ: ${TZ}
+```
+
+Docker Compose автоматически подстановит значения из `.env` файла при запуске.
 
 ### 3. Запуск
 
@@ -363,9 +417,6 @@ docker-compose up -d --build
 # Перезагрузка конкретного сервиса
 docker-compose restart bot
 
-# Масштабирование (если приложение позволяет)
-docker-compose up -d --scale bot=2
-
 # Очистка неиспользуемых образов и контейнеров
 docker system prune -a
 ```
@@ -380,6 +431,123 @@ docker system prune -a
 - Редактировать ключи
 - Проверять использование памяти
 - Мониторить состояние кэша ограничений
+
+## 🔧 Как работает система загрузки конфигурации
+
+Бот автоматически определяет окружение и загружает конфиг из соответствующего источника:
+
+### Локальный запуск
+```bash
+python bot.py
+```
+- Загружает конфиг из **`config.toml`**
+- Используется для разработки и локального тестирования
+
+### Запуск в Docker
+```bash
+docker-compose up -d
+```
+- Загружает конфиг из **переменных окружения** в `docker-compose.yml`
+- Автоматически определяется через файл `/.dockerenv` в контейнере
+- Используется для production развертывания
+
+### Правила преобразования переменных окружения
+
+Переменные окружения преобразуются в структуру конфига по схеме:
+- **Префикс**: `СЕКЦИЯ_` (например: `BOT_`, `LOGS_`, `MONGODB_`)
+- **Имя параметра**: в **нижнем регистре**
+- **Разделитель**: `_` для вложенных параметров
+
+#### Примеры преобразования
+
+**config.toml:**
+```toml
+[bot]
+token = "123:ABC..."
+owners = [111, 222]
+
+[logs]
+show_datetime = true
+show_debug_logs = false
+
+[mongodb]
+username = "user"
+password = "pass"
+```
+
+**docker-compose.yml (переменные окружения):**
+```yaml
+environment:
+  BOT_TOKEN: "123:ABC..."
+  BOT_OWNERS: "111,222"          # Список через запятую
+  LOGS_SHOW_DATETIME: "true"     # true/false как строки
+  LOGS_SHOW_DEBUG_LOGS: "false"
+  MONGODB_USERNAME: "user"
+  MONGODB_PASSWORD: "pass"
+```
+
+### Процесс загрузки
+1. **Проверка окружения** - ищет файл `/.dockerenv` или переменную `DOCKER_ENV=true`
+2. **Выбор источника:**
+   - Docker → читает переменные с префиксами
+   - Локально → читает `config.toml`
+3. **Валидация Pydantic** - применяет типы и преобразования
+4. **Использование значений** - заполняет конфиг или использует значения по умолчанию
+
+### Добавление новой опции конфигурации
+
+#### Шаг 1: Добавьте в Pydantic модель
+В `config_reader.py` найдите нужный класс (например, `BotConfig`):
+
+```python
+class BotConfig(BaseModel):
+    """Bot configuration."""
+    token: SecretStr
+    owners: list[int] = []
+    new_option: str = "default_value"  # Новая опция
+    
+    @field_validator("new_option", mode="before")
+    @classmethod
+    def validate_new_option(cls, v):
+        if isinstance(v, str):
+            return v.upper()
+        return v
+```
+
+#### Шаг 2: Добавьте в `config.toml` (для локального запуска)
+```toml
+[bot]
+token = "YOUR_TOKEN"
+owners = [123456789]
+new_option = "value"  # Новая опция
+```
+
+#### Шаг 3: Добавьте в `docker-compose.yml` (для Docker)
+```yaml
+services:
+  bot:
+    environment:
+      BOT_TOKEN: YOUR_TOKEN
+      BOT_OWNERS: "123456789"
+      BOT_NEW_OPTION: "value"  # Новая опция с префиксом BOT_
+```
+
+#### Шаг 4: Используйте в коде
+```python
+from config_reader import get_config, BotConfig
+
+bot_config = get_config(model=BotConfig, root_key="bot")
+print(bot_config.new_option)  # "VALUE" (благодаря валидатору)
+```
+
+### Приоритет загрузки (переменные окружения берут приоритет)
+1. **Прямые переменные окружения** (установленные в системе или контейнере) - **НАИВЫСШИЙ ПРИОРИТЕТ**
+   ```bash
+   BOT_TOKEN=override_value docker-compose up  # Переопределит значение
+   ```
+2. **Переменные из `docker-compose.yml`** (в Docker)
+3. **Значения из `config.toml`** (локально)
+4. **Значения по умолчанию** из Pydantic моделей - **НАИМЕНЬШИЙ ПРИОРИТЕТ**
 
 ## ⚙️ Конфигурация в деталях
 

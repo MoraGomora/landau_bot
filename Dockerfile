@@ -9,5 +9,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy application code
 COPY . .
 
+# Set Docker environment flag
+ENV DOCKER_ENV=true
+
 # Run bot
 CMD ["python", "bot.py"]

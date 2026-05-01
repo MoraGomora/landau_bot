@@ -64,19 +64,19 @@ async def _check_status(update: ChatMemberUpdated, container: AppContainer) -> N
 
         return
     
-    result = await update.bot.unban_chat_member(
-        chat_id,
-        user_id
-    )
+    # result = await update.bot.unban_chat_member(
+    #     chat_id,
+    #     user_id
+    # )
 
-    if not result:
-        await container.logger.aerror(
-            "Failed to unban user",
-            user_id=user_id,
-            chat_id=chat_id
-        )
+    # if not result:
+    #     await container.logger.aerror(
+    #         "Failed to unban user",
+    #         user_id=user_id,
+    #         chat_id=chat_id
+    #     )
 
-        return
+    #     return
     
     status = BanStatus.UNBANNED if user.status not in restricted else BanStatus.BANNED
     await _set_status(

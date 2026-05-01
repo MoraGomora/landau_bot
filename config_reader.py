@@ -78,6 +78,15 @@ class URL(BaseModel):
     url: str
 
 
+def is_docker_env() -> bool:
+    """Check if running in Docker environment."""
+    # Check for .dockerenv file (most reliable)
+    if Path("/.dockerenv").exists():
+        return True
+    # Fallback: check for DOCKER_ENV environment variable
+    return environ.get("DOCKER_ENV", "").lower() == "true"
+
+
 def get_config_path() -> Path:
     """Get configuration file path from environment or default."""
     env_path = environ.get("CONFIG_FILE_PATH")
@@ -103,9 +112,12 @@ def get_config(model: Type[ConfigType], root_key: str) -> ConfigType:
     """
     Get typed configuration section.
 
+    In Docker environment, loads from environment variables.
+    Locally, loads from config.toml file.
+
     Args:
         model: Pydantic model class for validation
-        root_key: Top-level key in config file
+        root_key: Top-level key in config file (or env var name prefix in Docker)
 
     Returns:
         Validated configuration object
@@ -113,12 +125,36 @@ def get_config(model: Type[ConfigType], root_key: str) -> ConfigType:
     Raises:
         KeyError: If root_key not found in config
     """
-    config_dict = parse_config_file()
+    if is_docker_env():
+        # In Docker: load from environment variables
+        config_dict = _load_config_from_env(root_key)
+    else:
+        # Locally: load from config.toml
+        config_dict = parse_config_file()
 
     if root_key not in config_dict:
-        raise KeyError(f"Configuration key '{root_key}' not found in config file")
+        raise KeyError(f"Configuration key '{root_key}' not found in config")
 
     return model.model_validate(config_dict[root_key])
+
+
+def _load_config_from_env(root_key: str) -> dict:
+    """
+    Load configuration from environment variables.
+    
+    Expects environment variables prefixed with root_key (uppercase).
+    Example: For root_key='bot', expects BOT_TOKEN, BOT_OWNERS, etc.
+    """
+    prefix = root_key.upper() + "_"
+    config_dict = {root_key: {}}
+    
+    for key, value in environ.items():
+        if key.startswith(prefix):
+            # Remove prefix and convert to lowercase
+            config_key = key[len(prefix):].lower()
+            config_dict[root_key][config_key] = value
+    
+    return config_dict
 
 
 def get_env_or_config(
@@ -130,12 +166,24 @@ def get_env_or_config(
     """
     Get value from environment variable or config file.
 
-    Environment variables take precedence over config file values.
+    Environment variables always take precedence.
+    In Docker: uses environment variables with proper prefix.
+    Locally: falls back to config.toml values.
     """
     env_value = environ.get(env_var)
     if env_value is not None:
         return env_value
 
+    # If in Docker, check for prefixed environment variable
+    if is_docker_env():
+        prefix = config_key.upper() + "_"
+        docker_var = prefix + config_attr.upper()
+        docker_value = environ.get(docker_var)
+        if docker_value is not None:
+            return docker_value
+        return None
+
+    # Locally: load from config.toml
     try:
         config = get_config(model=config_model, root_key=config_key)
         return getattr(config, config_attr, None)
