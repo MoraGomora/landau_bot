@@ -417,7 +417,7 @@ class BanService:
                 chat_id,
                 self.container.translator.call(
                     "failed-to-ban",
-                    e="Telegram error"
+                    error="Telegram error"
                 )
             )
             return
@@ -456,6 +456,6 @@ class BanService:
                 chat_id,
                 self.container.translator.call(
                     "failed-to-ban",
-                    e="Failed to finalize ban process"
+                    error="Failed to finalize ban process"
                 )
             )

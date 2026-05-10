@@ -95,7 +95,7 @@ violation-msg =
 
 failed-to-ban =
     <b>⚠️ Failed to ban user</b>
-    <i>Reason (from Telegram):</i> <code>{ e }</code>
+    <i>Reason (from Telegram):</i> { error }
 
 cannot-get-owner =
     <b>⚠️ Failed to get group owner</b>

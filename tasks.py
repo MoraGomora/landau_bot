@@ -1,11 +1,16 @@
+from datetime import datetime, timedelta
+
+import os
 import time
 
 from aiogram import Bot
 from aiogram.enums import ChatMemberStatus
+from aiogram.exceptions import TelegramBadRequest
 
 from core.container import AppContainer
 from handlers.common import BanService, utils
 from enums import BanStatus
+from utils import send_logs
 
 
 async def check_users_status(bot: Bot, container: AppContainer) -> None:
@@ -14,7 +19,37 @@ async def check_users_status(bot: Bot, container: AppContainer) -> None:
         return
     
     ban_service = BanService(bot, container)
+    me = await bot.get_me()
+
     for user in users:
+        admins = await bot.get_chat_administrators(user.chat_id)
+
+        if not admins:
+            await container.logger.aerror(
+                "Failed to get chat administrators from Telegram. Skip current iteration...",
+                chat_id=user.chat_id
+            )
+
+            continue
+
+        if user.user_id in [admin.user.id for admin in admins]:
+            await container.logger.adebug(
+                "User is administrator in the chat. Skip banning...",
+                user_id=user.user_id,
+                chat_id=user.chat_id
+            )
+
+            continue
+
+        if user.user_id == me.id:
+            await container.logger.adebug(
+                "User is the bot itself. Skip banning...",
+                user_id=user.user_id,
+                chat_id=user.chat_id
+            )
+
+            continue
+
         await ban_service.ban_member(
             user.chat_id,
             user.user_id,
@@ -71,48 +106,59 @@ async def check_user_ban_status(bot: Bot, container: AppContainer) -> None:
         return
     
     restricted = [ChatMemberStatus.KICKED, ChatMemberStatus.RESTRICTED]
+
     for user in chat_users:
-        user_status = await bot.get_chat_member(user.chat_id, user.user_id)
+        try:
+            user_status = await bot.get_chat_member(user.chat_id, user.user_id)
 
-        if not user_status:
-            await container.logger.aerror(
-                "Failed to get chat member from Telegram. Skip current iteration...",
+            if not user_status:
+                await container.logger.aerror(
+                    "Failed to get chat member from Telegram. Skip current iteration...",
+                    user_id=user.user_id,
+                    chat_id=user.chat_id
+                )
+
+                continue
+
+            await container.logger.adebug(
+                "Got user status from Telegram. Checking if it is correct with the database record...",
                 user_id=user.user_id,
-                chat_id=user.chat_id
+                chat_id=user.chat_id,
+                telegram_status=user_status.status,
+                db_status=user.status
+            )
+            
+            status = BanStatus.BANNED if user_status.status in restricted else BanStatus.UNBANNED
+            result = await container.services.chat_user.set_ban_status(
+                user.user_id,
+                user.chat_id,
+                status
             )
 
-            continue
+            if not result:
+                await container.logger.aerror(
+                    "Failed to set ban status for chat user. Skip current iteration...",
+                    user_id=user.user_id,
+                    chat_id=user.chat_id
+                )
 
-        await container.logger.adebug(
-            "Got user status from Telegram. Checking if it is correct with the database record...",
-            user_id=user.user_id,
-            chat_id=user.chat_id,
-            telegram_status=user_status.status,
-            db_status=user.status
-        )
-        
-        status = BanStatus.BANNED if user_status.status in restricted else BanStatus.UNBANNED
-        result = await container.services.chat_user.set_ban_status(
-            user.user_id,
-            user.chat_id,
-            status
-        )
+                continue
 
-        if not result:
-            await container.logger.aerror(
-                "Failed to set ban status for chat user. Skip current iteration...",
+            await container.logger.adebug(
+                "Ban status for user was set successfully",
                 user_id=user.user_id,
-                chat_id=user.chat_id
+                chat_id=user.chat_id,
+                status=result.status
+            )
+        except TelegramBadRequest as e:
+            await container.logger.aerror(
+                "Telegram error while getting chat member. Skip current iteration...",
+                user_id=user.user_id,
+                chat_id=user.chat_id,
+                error=str(e)
             )
 
-            continue
-
-        await container.logger.adebug(
-            "Ban status for user was set successfully",
-            user_id=user.user_id,
-            chat_id=user.chat_id,
-            status=result.status
-        )
+            return
 
 
 async def unban_member(bot: Bot, container: AppContainer) -> None:
@@ -189,4 +235,30 @@ async def unban_member(bot: Bot, container: AppContainer) -> None:
             "User was unbanned successfully",
             user_id=user.user_id,
             chat_id=user.chat_id
+        )
+
+
+async def send_daily_logs(bot: Bot, owners: list[int], container: AppContainer) -> None:
+    now = datetime.now()
+    yesterday = (now - timedelta(days=1)).strftime("%Y-%m-%d")
+    path = f"logs/{yesterday}.log"
+    
+    if not os.path.exists(path):
+        return
+    
+    if now.hour != 0:
+        return
+    
+    for owner_id in owners:
+        await container.logger.adebug(
+            "Sending daily logs to owner...",
+            owner_id=owner_id,
+            log_file=path
+        )
+
+        await send_logs(
+            bot,
+            owner_id,
+            path,
+            caption=f"Daily logs for {yesterday}"
         )
