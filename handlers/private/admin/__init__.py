@@ -1,7 +1,7 @@
 from aiogram import Router
 
 from filters import IsOwnerFilter
-from . import start
+from . import start, logs
 
 
 router = Router(name="admin")
@@ -9,5 +9,6 @@ router.message.filter(IsOwnerFilter())
 
 
 router.include_routers(
-    start.router
+    start.router,
+    logs.router
 )
